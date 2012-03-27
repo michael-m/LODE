@@ -37,7 +37,7 @@ OnItemSelectedListener, OnItemClickListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	private int scrWidth, scrHeight;
-	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, SLIDEPOS = 7;
+	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6;
 	private RelativeLayout rlMain = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
