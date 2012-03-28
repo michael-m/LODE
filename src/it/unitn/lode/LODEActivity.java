@@ -37,7 +37,7 @@ OnItemSelectedListener, OnItemClickListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
-	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6;
+	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7;
 	private RelativeLayout rlMain = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
@@ -46,6 +46,7 @@ OnItemSelectedListener, OnItemClickListener{
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
 	private ImageButton btnPlay = null;
+	private ImageButton btnFullScreen = null;
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	private boolean isStarted = false;
@@ -74,7 +75,7 @@ OnItemSelectedListener, OnItemClickListener{
 			@Override
 			public void run() {
 				try {
-					Thread.sleep(4000);
+					Thread.sleep(5000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -172,12 +173,20 @@ OnItemSelectedListener, OnItemClickListener{
 //        vidView.setVideoURI(Uri.parse("http://commonsware.com/misc/test2.3gp"));
         vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
+        vidView.setLongClickable(true);
         
         btnPlay = new ImageButton(this);
         btnF = new ImageButton(this);
         btnR = new ImageButton(this);
+        btnFullScreen = new ImageButton(this);
         sbSlider = new SeekBar(this);
+        
         hideMc();
+
+        btnFullScreen.setOnClickListener(this);
+        btnFullScreen.setImageResource(R.drawable.fullscreen);
+        btnFullScreen.setId(FS);
+        btnFullScreen.setBackgroundColor(Color.TRANSPARENT);
         
         btnPlay.setOnClickListener(this);
         btnPlay.setImageResource(R.drawable.ic_media_play);
@@ -230,6 +239,11 @@ OnItemSelectedListener, OnItemClickListener{
         rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
         rlMainParams.leftMargin = 120;
         rlMain.addView(btnF, rlMainParams);
+
+        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+        rlMainParams.topMargin = 30;
+        rlMainParams.leftMargin = 10;
+        rlMain.addView(btnFullScreen, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 180 , 50);
         rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
@@ -305,12 +319,14 @@ OnItemSelectedListener, OnItemClickListener{
 		btnPlay.setVisibility(View.INVISIBLE);
 		btnF.setVisibility(View.INVISIBLE);
 		btnR.setVisibility(View.INVISIBLE);
+		btnFullScreen.setVisibility(View.INVISIBLE);
 		sbSlider.setVisibility(View.INVISIBLE);
 	}
 	public void showMc(){
 		btnPlay.setVisibility(View.VISIBLE);
 		btnF.setVisibility(View.VISIBLE);
 		btnR.setVisibility(View.VISIBLE);
+		btnFullScreen.setVisibility(View.VISIBLE);
 		sbSlider.setVisibility(View.VISIBLE);
 	}
 	@Override

@@ -23,12 +23,14 @@
         </activity>
 
         <activity
-            android:name=".LODEActivity1" android:screenOrientation="landscape">
+            android:name=".LODESettingsActivity" android:screenOrientation="landscape">
         </activity>
 
         <activity
-            android:name=".LODEActivity2" android:screenOrientation="landscape">
+            android:name=".LODEDownloadsActivity" android:screenOrientation="landscape">
         </activity>
+        <activity
+            android:name=".PlayInFullScreenActivity" android:screenOrientation="landscape" />
         </application>
 
 </manifest>

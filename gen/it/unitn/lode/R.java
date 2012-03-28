@@ -13,23 +13,26 @@ public final class R {
     public static final class drawable {
         public static final int arrow_down_float=0x7f020000;
         public static final int arrow_up_float=0x7f020001;
-        public static final int ic_launcher=0x7f020002;
-        public static final int ic_media_ff=0x7f020003;
-        public static final int ic_media_next=0x7f020004;
-        public static final int ic_media_pause=0x7f020005;
-        public static final int ic_media_play=0x7f020006;
-        public static final int ic_media_previous=0x7f020007;
-        public static final int ic_media_rew=0x7f020008;
-        public static final int ic_tab_artists_grey=0x7f020009;
-        public static final int ic_tab_artists_white=0x7f02000a;
-        public static final int slide=0x7f02000b;
-        public static final int tabs=0x7f02000c;
-        public static final int tray_handle_normal_h=0x7f02000d;
-        public static final int tray_handle_normal_v=0x7f02000e;
+        public static final int fullscreen=0x7f020002;
+        public static final int ic_launcher=0x7f020003;
+        public static final int ic_media_ff=0x7f020004;
+        public static final int ic_media_next=0x7f020005;
+        public static final int ic_media_pause=0x7f020006;
+        public static final int ic_media_play=0x7f020007;
+        public static final int ic_media_previous=0x7f020008;
+        public static final int ic_media_rew=0x7f020009;
+        public static final int ic_tab_artists_grey=0x7f02000a;
+        public static final int ic_tab_artists_white=0x7f02000b;
+        public static final int slide=0x7f02000c;
+        public static final int tab_normal=0x7f02000d;
+        public static final int tabs=0x7f02000e;
+        public static final int tray_handle_normal_h=0x7f02000f;
+        public static final int tray_handle_normal_v=0x7f020010;
     }
     public static final class id {
         public static final int flTimeline=0x7f050001;
         public static final int handle_v=0x7f050003;
+        public static final int llTabs=0x7f050007;
         public static final int lvTimeline=0x7f050005;
         public static final int rlMain=0x7f050000;
         public static final int rlTimeline=0x7f050004;
