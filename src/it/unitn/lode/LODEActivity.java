@@ -3,6 +3,7 @@ package it.unitn.lode;
 import java.util.ArrayList;
 import android.view.View.OnClickListener;
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.MediaPlayer;
@@ -60,6 +61,9 @@ OnItemSelectedListener, OnItemClickListener{
 	private ListView lvTimeline = null;
 	private RelativeLayout rlTimeline = null;
 	private ArrayList<TextView> slidePos = null;
+	private Intent fsIntent = null;
+	private Bundle fsBundle = null;
+	private String videoUrl = "";
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -168,8 +172,10 @@ OnItemSelectedListener, OnItemClickListener{
         vidView = new VidView(this);
         vidView.setBackgroundResource(R.layout.corners);
         vidView.setId(VIDEO);
-        vidView.setVideoURI(Uri.parse("http://itunes.unitn.it/itunes/archive" +
-        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4"));
+        videoUrl = "http://itunes.unitn.it/itunes/archive" +
+        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4";
+//        videoUrl = "http://commonsware.com/misc/test2.3gp";
+        vidView.setVideoURI(Uri.parse(videoUrl));
 //        vidView.setVideoURI(Uri.parse("http://commonsware.com/misc/test2.3gp"));
         vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
@@ -207,8 +213,6 @@ OnItemSelectedListener, OnItemClickListener{
         sbSlider.setProgress(0);
         sbSlider.setOnSeekBarChangeListener(this);
         
-//        sdVideo = (SlidingDrawer) findViewById(R.id.sdVideo);
-//        sdVideo.setOnDrawerScrollListener(this);
         sdTimeline = (SlidingDrawer) findViewById(R.id.sdTimeline);
         flParams = new FrameLayout.LayoutParams(scrWidth / 4, scrHeight - 10);
         flParams.gravity = Gravity.RIGHT;
@@ -291,8 +295,25 @@ OnItemSelectedListener, OnItemClickListener{
 				sdTimeline.animateClose();
 			}
 		}
+		else if(view.getId() == FS){
+			fsIntent = new Intent(this, PlayInFullScreenActivity.class);
+			fsBundle = new Bundle();
+			fsBundle.putInt("CurrPos", vidView.getCurrentPosition());
+			fsBundle.putString("VideoURL", videoUrl);
+			fsIntent.putExtras(fsBundle);
+			btnPlay.setImageResource(R.drawable.ic_media_play);
+			playState = 0;
+			vidView.pause();
+			startActivityForResult(fsIntent, 0);
+		}
 	}
-
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		playState = 1;
+		btnPlay.setImageResource(R.drawable.ic_media_pause);
+		vidView.resume();
+	}
 	@Override
 	public boolean onTouch(View view, MotionEvent event) {
 		if(view.getId() == VIDEO){
