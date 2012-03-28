@@ -9,16 +9,26 @@
     <application
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name" >
+        android:label="@string/app_name">
         <activity
-            android:label="@string/app_name"
-            android:name=".LODEActivity" android:screenOrientation="landscape">
+            android:name=".LODETabsActivity" android:screenOrientation="landscape">
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
+        <activity
+            android:name=".LODEActivity" android:screenOrientation="landscape">
+        </activity>
+
+        <activity
+            android:name=".LODEActivity1" android:screenOrientation="landscape">
+        </activity>
+
+        <activity
+            android:name=".LODEActivity2" android:screenOrientation="landscape">
+        </activity>
+        </application>
 
 </manifest>

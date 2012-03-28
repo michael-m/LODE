@@ -36,7 +36,7 @@ OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerO
 OnItemSelectedListener, OnItemClickListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
-	private int scrWidth, scrHeight;
+	public static int scrWidth, scrHeight;
 	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6;
 	private RelativeLayout rlMain = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
@@ -53,7 +53,7 @@ OnItemSelectedListener, OnItemClickListener{
 	private Runnable waitAndHide = null;
 	private Runnable sliderUpdater = null;
 	private Thread thread = null, dead = null;
-	private SlidingDrawer sdVideo = null, sdTimeline = null;
+	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
 	private ListView lvTimeline = null;
@@ -198,8 +198,8 @@ OnItemSelectedListener, OnItemClickListener{
         sbSlider.setProgress(0);
         sbSlider.setOnSeekBarChangeListener(this);
         
-        sdVideo = (SlidingDrawer) findViewById(R.id.sdVideo);
-        sdVideo.setOnDrawerScrollListener(this);
+//        sdVideo = (SlidingDrawer) findViewById(R.id.sdVideo);
+//        sdVideo.setOnDrawerScrollListener(this);
         sdTimeline = (SlidingDrawer) findViewById(R.id.sdTimeline);
         flParams = new FrameLayout.LayoutParams(scrWidth / 4, scrHeight - 10);
         flParams.gravity = Gravity.RIGHT;
@@ -364,5 +364,10 @@ OnItemSelectedListener, OnItemClickListener{
 	@Override
 	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
 		sdTimeline.animateClose();
+	}
+	@Override
+	protected void onStart() {
+		super.onStart();
+		flTimeline.bringToFront();
 	}
 }
