@@ -6,15 +6,18 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TabHost;
+import android.widget.TabHost.OnTabChangeListener;
 import android.widget.TextView;
 
-public class LODETabsActivity extends TabActivity {
+public class LODETabsActivity extends TabActivity implements OnTabChangeListener {
+	private TabHost tabHost = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.tabs_main);
 
-        TabHost tabHost = getTabHost();
+        tabHost = getTabHost();
+        tabHost.setOnTabChangedListener(this);
         TabHost.TabSpec spec;
 
         Intent intent = new Intent().setClass(this, LODEActivity.class);
@@ -58,5 +61,9 @@ public class LODETabsActivity extends TabActivity {
 //        	tabHost.getTabWidget().getChildAt(a).setLayoutParams(tabParams);
 //        }
 //        tabHost.setCurrentTab(0);
+	}
+
+	@Override
+	public void onTabChanged(String tabId) {
 	}
 }

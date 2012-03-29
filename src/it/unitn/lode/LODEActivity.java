@@ -1,5 +1,6 @@
 package it.unitn.lode;
 
+import java.io.File;
 import java.util.ArrayList;
 import android.view.View.OnClickListener;
 import android.app.Activity;
@@ -8,8 +9,10 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
+import android.media.MediaPlayer.OnPreparedListener;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.view.Display;
 import android.view.Gravity;
@@ -20,6 +23,7 @@ import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ImageView.ScaleType;
@@ -34,7 +38,7 @@ import android.widget.TextView;
 
 public class LODEActivity extends Activity implements OnClickListener, OnTouchListener,
 OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
-OnItemSelectedListener, OnItemClickListener{
+OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
@@ -42,7 +46,7 @@ OnItemSelectedListener, OnItemClickListener{
 	private RelativeLayout rlMain = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
-	private VidView vidView = null;
+	public static VidView vidView = null;
 	private ImageView imView = null;
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
@@ -50,11 +54,13 @@ OnItemSelectedListener, OnItemClickListener{
 	private ImageButton btnFullScreen = null;
 	private SeekBar sbSlider = null;
 	private int playState = 0;
-	private boolean isStarted = false;
+	public static int currPos = 0;
+	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false;
+	public static boolean hasFinished = false;
 	private Handler handler = null;
 	private Runnable waitAndHide = null;
 	private Runnable sliderUpdater = null;
-	private Thread thread = null, dead = null;
+	private Thread thread = null, dead = null, sliderThread = null;
 	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
@@ -64,6 +70,7 @@ OnItemSelectedListener, OnItemClickListener{
 	private Intent fsIntent = null;
 	private Bundle fsBundle = null;
 	private String videoUrl = "";
+	private ProgressBar pbVideo = null;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,11 +102,12 @@ OnItemSelectedListener, OnItemClickListener{
         sliderUpdater = new Runnable(){
 			@Override
 			public void run() {
-				while(vidView.isPlaying()){
+				while(true){
 					handler.post(new Runnable() {
 						@Override
 						public void run() {
-							sbSlider.setProgress((vidView.getCurrentPosition() * 100) / vidView.getDuration());
+							int progress = (vidView.getCurrentPosition() * 100) / vidView.getDuration();
+							sbSlider.setProgress(progress);
 						}
 					});
 					try {
@@ -172,13 +180,18 @@ OnItemSelectedListener, OnItemClickListener{
         vidView = new VidView(this);
         vidView.setBackgroundResource(R.layout.corners);
         vidView.setId(VIDEO);
-        videoUrl = "http://itunes.unitn.it/itunes/archive" +
-        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4";
-//        videoUrl = "http://commonsware.com/misc/test2.3gp";
+//        videoUrl = "http://itunes.unitn.it/itunes/archive" +
+//        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4";
+        videoUrl = "http://commonsware.com/misc/test2.3gp";
         vidView.setVideoURI(Uri.parse(videoUrl));
-//        vidView.setVideoURI(Uri.parse("http://commonsware.com/misc/test2.3gp"));
+
+//        File clip = new File(Environment.getExternalStorageDirectory(), "test2.3gp");
+//        vidView.setVideoPath(clip.getAbsolutePath());
+//        videoUrl = clip.getAbsolutePath();
+
         vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
+        vidView.setOnPreparedListener(this);
         vidView.setLongClickable(true);
         
         btnPlay = new ImageButton(this);
@@ -186,7 +199,9 @@ OnItemSelectedListener, OnItemClickListener{
         btnR = new ImageButton(this);
         btnFullScreen = new ImageButton(this);
         sbSlider = new SeekBar(this);
-        
+        pbVideo = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
+        pbVideo.setVisibility(View.GONE);
+
         hideMc();
 
         btnFullScreen.setOnClickListener(this);
@@ -229,6 +244,11 @@ OnItemSelectedListener, OnItemClickListener{
         rlMainParams.leftMargin = 10;
         rlMain.addView(vidView, rlMainParams);
 
+        rlMainParams = new RelativeLayout.LayoutParams(30, 30);
+        rlMainParams.topMargin = scrHeight * 3 / 8;
+        rlMainParams.leftMargin = scrHeight * 3 / 8;
+        rlMain.addView(pbVideo, rlMainParams);
+
         rlMainParams = new RelativeLayout.LayoutParams(50, 50);
         rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
         rlMainParams.leftMargin = 20;
@@ -261,7 +281,7 @@ OnItemSelectedListener, OnItemClickListener{
         rlMainParams.topMargin = 30;
         rlMainParams.leftMargin = scrHeight * 3 / 4 + scrHeight / 30;
         rlMainParams.rightMargin = 10;
-       rlMain.addView(imView, rlMainParams);
+        rlMain.addView(imView, rlMainParams);
 	}
 	@Override
 	public void onClick(View view) {
@@ -269,15 +289,22 @@ OnItemSelectedListener, OnItemClickListener{
 			if(playState == 0){
 				playState = 1;
 				btnPlay.setImageResource(R.drawable.ic_media_pause);
+				pbVideo.bringToFront();
 				vidView.start();
 				new Thread(waitAndHide).start();
-				new Thread(sliderUpdater).start();
+				if(sliderThread == null){
+					sliderThread = new Thread(sliderUpdater);
+					sliderThread.start();
+				}
 				isStarted = true;
 			}
 			else{
 				playState = 0;
 				btnPlay.setImageResource(R.drawable.ic_media_play);
 				vidView.pause();
+				dead = sliderThread;
+				sliderThread = null;
+				dead.interrupt();
 			}
 		}
 		else if(view.getId() == FF){
@@ -304,15 +331,45 @@ OnItemSelectedListener, OnItemClickListener{
 			btnPlay.setImageResource(R.drawable.ic_media_play);
 			playState = 0;
 			vidView.pause();
-			startActivityForResult(fsIntent, 0);
+			if(sliderThread != null){
+				dead = sliderThread;
+				sliderThread = null;
+				dead.interrupt();
+			}
+			fullScreen = true;
+			startActivity(fsIntent);
 		}
 	}
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
-		playState = 1;
-		btnPlay.setImageResource(R.drawable.ic_media_pause);
-		vidView.resume();
+	protected void onPause() {
+		super.onPause();
+		vidView.pause();
+		playState = 0;
+		btnPlay.setImageResource(R.drawable.ic_media_play);
+	}
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if(firstTime || fullScreen){
+	        pbVideo.setVisibility(View.VISIBLE);
+		}
+		if(!firstTime & !hasFinished & fullScreen){
+			playState = 1;
+			btnPlay.setImageResource(R.drawable.ic_media_pause);
+			vidView.seekTo(currPos);
+			isResuming = true;
+			isStarted = true;
+			fullScreen = false;
+			vidView.start();
+			sliderThread = new Thread(sliderUpdater);
+			sliderThread.start();
+		}
+		else{
+			if(hasFinished){
+				hasFinished = false;
+			}
+			firstTime = false;
+		}
 	}
 	@Override
 	public boolean onTouch(View view, MotionEvent event) {
@@ -353,14 +410,19 @@ OnItemSelectedListener, OnItemClickListener{
 	@Override
 	public void onCompletion(MediaPlayer mp) {
 		btnPlay.setImageResource(R.drawable.ic_media_play);
+		dead = sliderThread;
+		sliderThread = null;
+		dead.interrupt();
+		sbSlider.setProgress(0);
 		playState = 0;
 		showMc();
 	}
 	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress,
 			boolean fromUser) {
-		if(fromUser){
+		if(fromUser || isResuming){
 			vidView.seekTo((vidView.getDuration() * progress) / 100);
+			isResuming = false;
 		}
 	}
 	@Override
@@ -406,5 +468,9 @@ OnItemSelectedListener, OnItemClickListener{
 	protected void onStart() {
 		super.onStart();
 		flTimeline.bringToFront();
+	}
+	@Override
+	public void onPrepared(MediaPlayer mp) {
+		pbVideo.setVisibility(View.INVISIBLE);
 	}
 }

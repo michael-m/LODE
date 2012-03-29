@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:gravity="center">
-    <VideoView 
+
+    <it.unitn.lode.VidView
+        xmlns:android="http://schemas.android.com/apk/res/android" 
         android:id="@+id/vvFsVideo"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
-</LinearLayout>
+    <LinearLayout
+        android:id="@+id/llFsVideo"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:gravity="center"
+        android:visibility="gone">
+    	<ProgressBar
+        	android:id="@+id/pbFsVideo"
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"/>
+    </LinearLayout>
+</RelativeLayout>

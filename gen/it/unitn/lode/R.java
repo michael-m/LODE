@@ -30,14 +30,16 @@ public final class R {
         public static final int tray_handle_normal_v=0x7f020010;
     }
     public static final class id {
-        public static final int flTimeline=0x7f050002;
-        public static final int handle_v=0x7f050004;
-        public static final int llTabs=0x7f050008;
-        public static final int lvTimeline=0x7f050006;
-        public static final int rlMain=0x7f050001;
-        public static final int rlTimeline=0x7f050005;
-        public static final int sdTimeline=0x7f050003;
-        public static final int tvSlidePos=0x7f050007;
+        public static final int flTimeline=0x7f050004;
+        public static final int handle_v=0x7f050006;
+        public static final int llFsVideo=0x7f050001;
+        public static final int llTabs=0x7f05000a;
+        public static final int lvTimeline=0x7f050008;
+        public static final int pbFsVideo=0x7f050002;
+        public static final int rlMain=0x7f050003;
+        public static final int rlTimeline=0x7f050007;
+        public static final int sdTimeline=0x7f050005;
+        public static final int tvSlidePos=0x7f050009;
         public static final int vvFsVideo=0x7f050000;
     }
     public static final class layout {
