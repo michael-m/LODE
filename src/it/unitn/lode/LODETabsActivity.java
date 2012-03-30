@@ -2,6 +2,7 @@ package it.unitn.lode;
 
 import android.app.TabActivity;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -11,11 +12,13 @@ import android.widget.TextView;
 
 public class LODETabsActivity extends TabActivity implements OnTabChangeListener {
 	private TabHost tabHost = null;
+	private Typeface tfApplegaramound = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.tabs_main);
 
+        tfApplegaramound = Typeface.createFromAsset(getAssets(), "fonts/Applegaramound.ttf");
         tabHost = getTabHost();
         tabHost.setOnTabChangedListener(this);
         TabHost.TabSpec spec;
@@ -25,16 +28,22 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         Intent intent2 = new Intent().setClass(this, LODESettingsActivity.class);
 
         TextView tv = new TextView(this);
+        tv.setTextSize(13);
+        tv.setTypeface(tfApplegaramound, Typeface.BOLD);
         tv.setText("Lectures");
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundResource(R.drawable.tab_normal);
 
         TextView tv1 = new TextView(this);
+        tv1.setTextSize(13);
+        tv1.setTypeface(tfApplegaramound, Typeface.BOLD);
         tv1.setText("Settings");
         tv1.setGravity(Gravity.CENTER);
         tv1.setBackgroundResource(R.drawable.tab_normal);
 
         TextView tv2 = new TextView(this);
+        tv2.setTextSize(13);
+        tv2.setTypeface(tfApplegaramound, Typeface.BOLD);
         tv2.setText("Downloads");
         tv2.setGravity(Gravity.CENTER);
         tv2.setBackgroundResource(R.drawable.tab_normal);
@@ -55,12 +64,6 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((LODEActivity.scrWidth * 3) /4, 30);
         tabParams.gravity = Gravity.CENTER;
         llTabs.setLayoutParams(tabParams);
-//        for(int a = 0; a < tabHost.getTabWidget().getChildCount(); a++){
-//        	tabParams = tabHost.getTabWidget().getChildAt(a).getLayoutParams();
-//        	tabParams.width = 102;
-//        	tabHost.getTabWidget().getChildAt(a).setLayoutParams(tabParams);
-//        }
-//        tabHost.setCurrentTab(0);
 	}
 
 	@Override

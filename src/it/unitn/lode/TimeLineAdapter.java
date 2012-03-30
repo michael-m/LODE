@@ -3,6 +3,7 @@ package it.unitn.lode;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.graphics.Typeface;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,11 +14,13 @@ import android.widget.TextView;
 
 public class TimeLineAdapter extends ArrayAdapter<TextView> implements OnClickListener {
 	private ArrayList<TextView> slidePos;
+	private Typeface tfApplegaramound = null;
 
     public TimeLineAdapter(Context context, int textViewResourceId,
             ArrayList<TextView> slidePos) {
         super(context, textViewResourceId, slidePos);
         this.slidePos = slidePos;
+        this.tfApplegaramound = Typeface.createFromAsset(LODEActivity.ASSETS, "fonts/Applegaramound.ttf");
     }
 
     @Override
@@ -32,10 +35,14 @@ public class TimeLineAdapter extends ArrayAdapter<TextView> implements OnClickLi
         if (tv != null) {
             TextView textViewTwo = (TextView) v.findViewById(R.id.tvSlidePos);
             if (textViewTwo != null) {
+            	textViewTwo.setTextSize(13);
+            	textViewTwo.setTypeface(tfApplegaramound);
                 textViewTwo.setText(tv.getText());
                 // put the id to identify the item clicked
                 textViewTwo.setTag(tv.getId());
-                textViewTwo.setOnClickListener(this);
+                textViewTwo.setFocusable(false);
+                textViewTwo.setClickable(false);
+//                textViewTwo.setOnClickListener(this);
             }
         }
         return v;

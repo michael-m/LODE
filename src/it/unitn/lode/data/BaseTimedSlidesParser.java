@@ -17,7 +17,6 @@ public abstract class BaseTimedSlidesParser implements TimedSlidesParser {
 
     protected BaseTimedSlidesParser(String lectureUrl){
         try {
-            //this.courseUrl = new URL(courseUrl + "/TIMED_SLIDES.XML");
         	this.lectureUrl = new URL("http://latemar.science.unitn.it/itunes/feeds/ScienzeMMFFNN/web_architectures/lecture2/TIMED_SLIDES.XML");
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
