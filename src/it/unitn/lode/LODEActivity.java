@@ -1,9 +1,17 @@
 package it.unitn.lode;
 
+import it.unitn.lode.data.LodeSaxDataParser;
+import it.unitn.lode.data.TimedSlides;
+
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -19,6 +27,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -59,7 +68,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public static boolean hasFinished = false;
 	private Handler handler = null;
 	private Runnable waitAndHide = null;
-	private Runnable sliderUpdater = null;
+	private Runnable sliderUpdater = null, listPopulator = null;
 	private Thread thread = null, dead = null, sliderThread = null;
 	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
@@ -71,14 +80,18 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private Bundle fsBundle = null;
 	private String videoUrl = "";
 	private ProgressBar pbVideo = null;
+	private Iterator<TimedSlides> tsIterator = null;
+	private LodeSaxDataParser tsParser = null;
+	private List<TimedSlides> ts = null;
+	private final Context LodeActivityContext = this;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
         flTimeline = (FrameLayout) findViewById(R.id.flTimeline);
-
         rlTimeline = (RelativeLayout) findViewById(R.id.rlTimeline);
+
         rlTimeline.setBackgroundResource(R.layout.timeline);
         
         handler = new Handler();
@@ -142,36 +155,39 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         tvTitle.setTextSize(10);
         tvTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         
-        tvSlidePos = new TextView(this);
-        tvSlidePos.setText("Slide name here");
-        tvSlidePos.setClickable(false);
-        tvSlidePos.setFocusable(false);
+        //tvSlidePos.setClickable(false);
+        //tvSlidePos.setFocusable(false);
 
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
-        slidePos.add(tvSlidePos);
+        listPopulator = new Runnable() {
+			@Override
+			public void run() {
+		        tsParser = new LodeSaxDataParser("");
+		        ts = tsParser.parseSlides();
+		        tsIterator = ts.iterator();
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						String title;
+				        while(tsIterator.hasNext()){
+				        	title = tsIterator.next().getTitolo().trim().replaceAll(" +", " ").replace("\n", "");
+				        	title = title.trim();
+				            tvSlidePos = new TextView(LodeActivityContext);
+				            tvSlidePos.setClickable(false);
+				            tvSlidePos.setFocusable(false);
+				        	tvSlidePos.setText(title);
+				        	slidePos.add(tvSlidePos);
+				        	Log.e("Title: ", title);
+				        }
+			            tvSlidePos = new TextView(LodeActivityContext);
+			            tvSlidePos.setClickable(false);
+			            tvSlidePos.setFocusable(false);
+			        	tvSlidePos.setText(" --- End ---");
+			        	slidePos.add(tvSlidePos);
+					}
+				});
+			}
+		};
+		new Thread(listPopulator).start();
         
         lvTimeline.setAdapter(new TimeLineAdapter(this, R.layout.slide_pos, slidePos));
         //lvTimeline.setOnItemSelectedListener(this);
@@ -229,9 +245,16 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         sbSlider.setOnSeekBarChangeListener(this);
         
         sdTimeline = (SlidingDrawer) findViewById(R.id.sdTimeline);
-        flParams = new FrameLayout.LayoutParams(scrWidth / 4, scrHeight - 10);
+        flParams = new FrameLayout.LayoutParams(scrWidth / 4 , scrHeight);
+        flParams.topMargin = 10;
+        flParams.bottomMargin = 10;
+        flParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
         flParams.gravity = Gravity.RIGHT;
         sdTimeline.setLayoutParams(flParams);
+
+        sdTimeline.setFocusable(false);
+        sdTimeline.setClickable(false);
+
         sdTimeline.setOnDrawerOpenListener(this);
 
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, 30);
