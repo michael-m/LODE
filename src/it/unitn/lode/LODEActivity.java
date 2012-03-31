@@ -168,6 +168,9 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
+			            tvSlidePos = new TextView(LodeActivityContext);
+			        	tvSlidePos.setText("Start");
+			        	slidePos.add(tvSlidePos);
 						String title;
 				        while(tsIterator.hasNext()){
 				        	title = tsIterator.next().getTitolo().trim().replaceAll(" +", " ").replace("\n", "");
@@ -178,7 +181,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				        	Log.e("Title: ", title);
 				        }
 			            tvSlidePos = new TextView(LodeActivityContext);
-			        	tvSlidePos.setText(" --- End ---");
+			        	tvSlidePos.setText("End");
 			        	slidePos.add(tvSlidePos);
 					}
 				});
@@ -186,7 +189,14 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		};
 		new Thread(listPopulator).start();
         
-        lvTimeline.setAdapter(new TimeLineAdapter(this, R.layout.slide_pos, slidePos));
+		lvTimeline.setAdapter(new TimeLineAdapter(this, R.layout.slide_pos, slidePos){
+			@Override
+			public boolean isEnabled(int position) {
+				if(position == 0 || position == slidePos.size() - 1)
+					return false;
+				return true;
+			}
+		});
         //lvTimeline.setOnItemSelectedListener(this);
         lvTimeline.setOnItemClickListener(this);
         
