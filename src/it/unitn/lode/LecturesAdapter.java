@@ -39,17 +39,17 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
                 textViewTwo.setFocusable(false);
                 textViewTwo.setClickable(false);
                 
-//                if(position == 0){
-//                    textViewTwo.setTextSize(15);
-//                    textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD_ITALIC);
-//                    textViewTwo.setGravity(Gravity.CENTER);
-//                }
-//                else{
+                if(position == 0){
+                    textViewTwo.setTextSize(15);
+                    textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD);
+                    textViewTwo.setGravity(Gravity.CENTER);
+                }
+                else{
                     textViewTwo.setTextSize(14);
                     textViewTwo.setTypeface(tfApplegaramound, Typeface.NORMAL);
                     textViewTwo.setPadding(15, 5, 10, 5);
                     textViewTwo.setGravity(Gravity.LEFT);
-//                }
+                }
             }
         }
         return v;

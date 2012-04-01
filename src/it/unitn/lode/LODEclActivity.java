@@ -7,6 +7,8 @@ import it.unitn.lode.data.LodeSaxDataParser;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import android.app.Activity;
 import android.content.Context;
@@ -14,10 +16,13 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -33,6 +38,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 	private Runnable lecturesPopulator = null;
 	private List<Courses> cs = null;
 	private List<Lectures> ls = null;
+	private Map<Integer, List<Lectures>> cl = null;
 	private Iterator<Courses> csIterator = null;
 	private Iterator<Lectures> lsIterator = null;
 	private Handler handler = null;
@@ -56,21 +62,21 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
         rlCL = (RelativeLayout) findViewById(R.id.rlCL);
         courses = new ArrayList<TextView>();
         lectures = new ArrayList<TextView>();
-        
+        cl = new TreeMap<Integer, List<Lectures>>();
         tvCourse = new TextView(this);
         
         coursesPopulator = new Runnable() {
 			@Override
 			public void run() {
-	            coursesParser = new LodeSaxDataParser("http://latemar.science.unitn.it/itunes/feeds/COURSES.XML");
-	            cs = coursesParser.parseCourses();
+				coursesParser = new LodeSaxDataParser("http://latemar.science.unitn.it/itunes/feeds/COURSES.XML");
+		        cs = coursesParser.parseCourses();
 	            csIterator = cs.iterator();
 	            handler.post(new Runnable(){
 					@Override
 					public void run() {
 						String title;
 			            tvCourse = new TextView(coursesContext);
-			        	tvCourse.setText("Available Courses");
+			        	tvCourse.setText("\nAvailable Courses");
 			        	courses.add(tvCourse);
 			        	Log.e("Title: ", "Available Courses");
 				        while(csIterator.hasNext()){
@@ -79,7 +85,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 				            tvCourse = new TextView(coursesContext);
 				        	tvCourse.setText(title);
 				        	courses.add(tvCourse);
-				        	Log.e("Title: ", title);
+				        	//Log.e("Title: ", title);
 				        }
 				        lvCourses.invalidateViews();
 					}
@@ -97,12 +103,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 			}
 		});
         lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures){
-//			@Override
-//			public boolean isEnabled(int position) {
-//				if(position == 0)
-//					return false;
-//				return true;
-//			}
+			@Override
+			public boolean isEnabled(int position) {
+				if(position == 0)
+					return false;
+				return true;
+			}
 		});
         lvCourses.setChoiceMode(ListView.CHOICE_MODE_NONE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
@@ -123,16 +129,22 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
         //rlCLParams.topMargin = 10;
         rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3 + 5;
         rlCL.addView(lvLectures, rlCLParams);
- 	}
+
+//        rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth / 2, LODETabsActivity.scrHeight / 2);
+//        rlCLParams.topMargin = LODETabsActivity.scrHeight / 3;
+//        rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3;
+//        rlCL.addView(lvLectures, rlCLParams);
+	
+	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		final Integer POSITION = position;
 		for(int pos = 0; pos < parent.getCount(); pos++){
 			if(pos != position){
 				parent.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
 			}
 		}
 		parent.getChildAt(position).setBackgroundResource(R.layout.courses_corners_clicked);
-
 		if(parent.getId() == LV_COURSES){
 			tvItem = (TextView) parent.getItemAtPosition(position);
 			Iterator<Courses> selectedIterator = cs.iterator();
@@ -145,23 +157,35 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 					lecturesPopulator = new Runnable() {
 						@Override
 						public void run() {
-							String url = "http://latemar.science.unitn.it/itunes/feeds/" + selectedCourse.getFolderc() + "/LECTURES.XML";
-							LodeSaxDataParser lecturesParser = new LodeSaxDataParser(url);
-							ls = lecturesParser.parseLectures();
-							lsIterator = ls.iterator();
+							if(cl.get(POSITION) == null){
+								String url = "http://latemar.science.unitn.it/itunes/feeds/" + selectedCourse.getFolderc() + "/LECTURES.XML";
+								LodeSaxDataParser lecturesParser = new LodeSaxDataParser(url);
+								ls = lecturesParser.parseLectures();
+								cl.put(POSITION, ls);
+					        	Log.e("Retrieving from: ", "online");
+							}
+							lsIterator = cl.get(POSITION).iterator();
 							handler.post(new Runnable() {
 								@Override
 								public void run() {
 									lectures.removeAll(lectures);
+						            tvItem = new TextView(coursesContext);
+						            String courseDetails = "Professor: " + selectedCourse.getDocentec() + "\n";
+						            courseDetails+= "Academic Year: " + selectedCourse.getYear();
+						        	tvItem.setText(courseDetails);
+						        	lectures.add(tvItem);
+									
 							        while(lsIterator.hasNext()){
 							        	String lTitle = lsIterator.next().getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
 							        	lTitle = lTitle.trim();
 							            tvItem = new TextView(coursesContext);
 							        	tvItem.setText(lTitle);
 							        	lectures.add(tvItem);
-							        	Log.e("Title: ", lTitle);
+							        	//Log.e("Title: ", lTitle);
 							        }
-							        lvLectures.setChoiceMode(ListView.CHOICE_MODE_NONE);
+									for(int pos = 0; pos < lvLectures.getCount(); pos++){
+										lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
+									}
 							        lvLectures.invalidateViews();
 								}
 							});
@@ -171,6 +195,11 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 					break;
 				}
 			}
+		}
+		else if(parent.getId() == LV_LECTURES){
+			LayoutInflater inflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			PopupWindow pw = new PopupWindow(inflater.inflate(R.layout.lecture_popup, null, false), 100, 100, true);
+			pw.showAtLocation(this.findViewById(R.id.rlCL), Gravity.CENTER, 0, 0);
 		}
 	}
 }

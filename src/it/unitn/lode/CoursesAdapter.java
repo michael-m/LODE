@@ -41,7 +41,7 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
                 
                 if(position == 0){
                     textViewTwo.setTextSize(15);
-                    textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD_ITALIC);
+                    textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD);
                     textViewTwo.setGravity(Gravity.CENTER);
                 }
                 else{
