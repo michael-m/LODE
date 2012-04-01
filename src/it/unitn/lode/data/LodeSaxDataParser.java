@@ -9,10 +9,10 @@ import android.sax.EndTextElementListener;
 import android.sax.RootElement;
 import android.util.Xml;
 
-public class LodeSaxDataParser extends BaseTimedSlidesParser {
+public class LodeSaxDataParser extends BaseDataParser {
 
-	public LodeSaxDataParser(String lectureUrl) {
-		super(lectureUrl);
+	public LodeSaxDataParser(String url) {
+		super(url);
 	}
 	@Override
 	public List<TimedSlides> parseSlides() {
@@ -47,5 +47,42 @@ public class LodeSaxDataParser extends BaseTimedSlidesParser {
         }
         return timedSlides;
 	}
-
+	@Override
+	public List<Courses> parseCourses() {
+        final Courses currentCourse = new Courses();
+        RootElement root = new RootElement(COURSES);
+        final List<Courses> courses = new ArrayList<Courses>();
+        Element slide = root.getChild(COURSE);
+        slide.setEndElementListener(new EndElementListener(){
+            public void end() {
+                courses.add(currentCourse.copy());
+            }
+        });
+        slide.getChild(TITOLOC).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+                currentCourse.setTitoloc(body);
+            }
+        });
+        slide.getChild(YEAR).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+                currentCourse.setYear(body);
+            }
+        });
+        slide.getChild(DOCENTEC).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+                currentCourse.setDocentec(body);
+            }
+        });
+        slide.getChild(FOLDERC).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+                currentCourse.setFolderc(body);
+            }
+        });
+        try {
+            Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return courses;
+	}
 }

@@ -30,5 +30,4 @@ public class TimedSlides{
 		ts.titolo = getTitolo();
 		return ts;
 	}
-
 }

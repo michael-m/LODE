@@ -2,8 +2,10 @@ package it.unitn.lode;
 
 import android.app.TabActivity;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.Display;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TabHost;
@@ -13,17 +15,25 @@ import android.widget.TextView;
 public class LODETabsActivity extends TabActivity implements OnTabChangeListener {
 	private TabHost tabHost = null;
 	private Typeface tfApplegaramound = null;
+	private Display devDisplay = null;
+	public static int scrWidth, scrHeight;
+	public static AssetManager ASSETS = null; 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.tabs_main);
+
+        ASSETS = getAssets();
+        devDisplay = getWindowManager().getDefaultDisplay();
+        scrWidth = devDisplay.getWidth();
+        scrHeight = devDisplay.getHeight();
 
         tfApplegaramound = Typeface.createFromAsset(getAssets(), "fonts/Applegaramound.ttf");
         tabHost = getTabHost();
         tabHost.setOnTabChangedListener(this);
         TabHost.TabSpec spec;
 
-        Intent intent = new Intent().setClass(this, LODEActivity.class);
+        Intent intent = new Intent().setClass(this, LODEclActivity.class);
         Intent intent1 = new Intent().setClass(this, LODEDownloadsActivity.class);
         Intent intent2 = new Intent().setClass(this, LODESettingsActivity.class);
 
@@ -61,7 +71,7 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         tabHost.addTab(spec);
         
         LinearLayout llTabs = (LinearLayout) findViewById(R.id.llTabs);
-        LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((LODEActivity.scrWidth * 3) /4, 30);
+        LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((scrWidth * 3) /4, 30);
         tabParams.gravity = Gravity.CENTER;
         llTabs.setLayoutParams(tabParams);
 	}

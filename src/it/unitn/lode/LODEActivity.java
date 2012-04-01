@@ -28,6 +28,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -199,7 +200,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		});
         //lvTimeline.setOnItemSelectedListener(this);
         lvTimeline.setOnItemClickListener(this);
-        
         vidView = new VidView(this);
         vidView.setBackgroundResource(R.layout.corners);
         vidView.setId(VIDEO);
