@@ -52,28 +52,28 @@ public class LodeSaxDataParser extends BaseDataParser {
         final Courses currentCourse = new Courses();
         RootElement root = new RootElement(COURSES);
         final List<Courses> courses = new ArrayList<Courses>();
-        Element slide = root.getChild(COURSE);
-        slide.setEndElementListener(new EndElementListener(){
+        Element course = root.getChild(COURSE);
+        course.setEndElementListener(new EndElementListener(){
             public void end() {
                 courses.add(currentCourse.copy());
             }
         });
-        slide.getChild(TITOLOC).setEndTextElementListener(new EndTextElementListener(){
+        course.getChild(TITOLOC).setEndTextElementListener(new EndTextElementListener(){
             public void end(String body) {
                 currentCourse.setTitoloc(body);
             }
         });
-        slide.getChild(YEAR).setEndTextElementListener(new EndTextElementListener(){
+        course.getChild(YEAR).setEndTextElementListener(new EndTextElementListener(){
             public void end(String body) {
                 currentCourse.setYear(body);
             }
         });
-        slide.getChild(DOCENTEC).setEndTextElementListener(new EndTextElementListener(){
+        course.getChild(DOCENTEC).setEndTextElementListener(new EndTextElementListener(){
             public void end(String body) {
                 currentCourse.setDocentec(body);
             }
         });
-        slide.getChild(FOLDERC).setEndTextElementListener(new EndTextElementListener(){
+        course.getChild(FOLDERC).setEndTextElementListener(new EndTextElementListener(){
             public void end(String body) {
                 currentCourse.setFolderc(body);
             }
@@ -84,5 +84,53 @@ public class LodeSaxDataParser extends BaseDataParser {
             throw new RuntimeException(e);
         }
         return courses;
+	}
+	@Override
+	public List<Lectures> parseLectures() {
+        final Lectures currentLecture = new Lectures();
+        RootElement root = new RootElement(LECTURES);
+        final List<Lectures> lectures = new ArrayList<Lectures>();
+        Element lecture = root.getChild(LECTURE);
+        lecture.setEndElementListener(new EndElementListener(){
+            public void end() {
+                lectures.add(currentLecture.copy());
+            }
+        });
+        lecture.getChild(IDL).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+                currentLecture.setIdl(body);
+            }
+        });
+        lecture.getChild(URLLEZ).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+            	currentLecture.setUrllez(body);
+            }
+        });
+        lecture.getChild(FOLDERL).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+            	currentLecture.setFolderl(body);
+            }
+        });
+        lecture.getChild(DATEL).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+            	currentLecture.setDatel(body);
+            }
+        });
+        lecture.getChild(DOCENTEL).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+            	currentLecture.setDocentel(body);
+            }
+        });
+        lecture.getChild(TITOLOL).setEndTextElementListener(new EndTextElementListener(){
+            public void end(String body) {
+            	currentLecture.setTitolol(body);
+            }
+        });
+        try {
+            Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return lectures;
 	}
 }

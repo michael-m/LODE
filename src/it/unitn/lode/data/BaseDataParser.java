@@ -7,17 +7,25 @@ import java.net.URL;
 
 public abstract class BaseDataParser implements DataParser {
     // names of the XML tags
-    static final String SLIDE = "slide";
-    static final String TIME = "tempo";
-    static final String TITLE = "titolo";
-    static final String IMAGE = "immagine";
-    static final String TIMEDSLIDES = "TIMED_SLIDES";
-    static final String TITOLOC = "TITOLOC";
-    static final String YEAR = "YEAR";
-    static final String DOCENTEC = "DOCENTEC";
-    static final String FOLDERC = "FOLDERC";
-    static final String COURSES = "COURSES";
-    static final String COURSE = "COURSE";
+    protected static final String SLIDE = "slide";
+    protected static final String TIME = "tempo";
+    protected static final String TITLE = "titolo";
+    protected static final String IMAGE = "immagine";
+    protected static final String TIMEDSLIDES = "TIMED_SLIDES";
+    protected static final String TITOLOC = "TITOLOC";
+    protected static final String YEAR = "YEAR";
+    protected static final String DOCENTEC = "DOCENTEC";
+    protected static final String FOLDERC = "FOLDERC";
+    protected static final String COURSES = "COURSES";
+    protected static final String COURSE = "COURSE";
+    protected static final String LECTURES = "LECTURES";
+    protected static final String LECTURE = "LECTURE";
+    protected static final String IDL = "IDL";
+    protected static final String URLLEZ = "URLLEZ";
+    protected static final String FOLDERL = "FOLDERL";
+    protected static final String DATEL = "DATEL";
+    protected static final String DOCENTEL = "DOCENTEL";
+    protected static final String TITOLOL = "TITOLOL";
     
     final URL url;
 
