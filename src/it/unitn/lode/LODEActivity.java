@@ -155,7 +155,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         slidePos = new ArrayList<TextView>();
         
         tvTitle.setGravity(Gravity.CENTER_HORIZONTAL);
-        tvTitle.setText("Placeholder Text for Video Title");
+        tvTitle.setText("lecture1");
         tvTitle.setTextColor(Color.BLACK);
         tvTitle.setTextSize(14);
         tvTitle.setTypeface(tfApplegaramound, Typeface.BOLD);
@@ -163,7 +163,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         listPopulator = new Runnable() {
 			@Override
 			public void run() {
-		        tsParser = new LodeSaxDataParser("");
+		        tsParser = new LodeSaxDataParser("http://latemar.science.unitn.it/itunes/feeds/ScienzeMMFFNN/web_architectures/lecture1/TIMED_SLIDES.XML");
 		        ts = tsParser.parseSlides();
 		        tsIterator = ts.iterator();
 				handler.post(new Runnable() {

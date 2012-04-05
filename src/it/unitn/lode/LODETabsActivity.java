@@ -35,12 +35,12 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
 
         Intent intent = new Intent().setClass(this, LODEclActivity.class);
         Intent intent1 = new Intent().setClass(this, LODEDownloadsActivity.class);
-        Intent intent2 = new Intent().setClass(this, LODESettingsActivity.class);
+        Intent intent2 = new Intent().setClass(this, LODEActivity.class);
 
         TextView tv = new TextView(this);
         tv.setTextSize(13);
         tv.setTypeface(tfApplegaramound, Typeface.BOLD);
-        tv.setText("Lectures");
+        tv.setText("Courses");
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundResource(R.drawable.tab_normal);
 

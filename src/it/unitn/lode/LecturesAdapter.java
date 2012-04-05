@@ -15,8 +15,7 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
 	private ArrayList<TextView> lectures;
 	private Typeface tfApplegaramound = null;
 
-	public LecturesAdapter(Context context, int textViewResourceId,
-            ArrayList<TextView> lectures) {
+	public LecturesAdapter(Context context, int textViewResourceId, ArrayList<TextView> lectures) {
         super(context, textViewResourceId, lectures);
         this.lectures = lectures;
         this.tfApplegaramound = Typeface.createFromAsset(LODETabsActivity.ASSETS, "fonts/Applegaramound.ttf");

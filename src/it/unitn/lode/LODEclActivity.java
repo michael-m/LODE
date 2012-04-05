@@ -9,28 +9,28 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-public class LODEclActivity extends Activity implements OnItemClickListener {
+public class LODEclActivity extends Activity implements OnItemClickListener{
 	private ListView lvCourses = null;
 	private ListView lvLectures = null;
+	private ListView lvLectureInfo = null;
 	private ArrayList<TextView> courses = null;
 	private ArrayList<TextView> lectures = null;
+	private ArrayList<LectureInfo> lectureInfo = null;
 	private RelativeLayout rlCL = null;
 	private RelativeLayout.LayoutParams rlCLParams = null;
 	private LodeSaxDataParser coursesParser = null;
@@ -44,10 +44,15 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 	private Handler handler = null;
 	private final Context coursesContext = this;
 	private TextView tvCourse = null;
+	private TextView tvInfoItem = null;
 	private Courses selectedCourse = null;
 	private TextView tvItem = null;
 	private final int LV_COURSES = 0;
 	private final int LV_LECTURES = 1;
+	private final int LV_LECTURE_INFO = 2;
+	private int currPos = 0;
+	private ImageButton btnWatch = null;
+	private ImageButton btnDownload = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -58,10 +63,16 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
         lvCourses.setId(LV_COURSES);
         lvLectures = new ListView(this);
         lvLectures.setId(LV_LECTURES);
-
+        //lvLectureInfo = new ListView(this);
+        lvLectureInfo = (ListView) findViewById(R.id.lvLectureInfo);
+//        lvLectureInfo.setId(LV_LECTURE_INFO);
+        
         rlCL = (RelativeLayout) findViewById(R.id.rlCL);
+        btnDownload = (ImageButton) findViewById(R.id.btnDownload);
+
         courses = new ArrayList<TextView>();
         lectures = new ArrayList<TextView>();
+        lectureInfo = new ArrayList<LectureInfo>();
         cl = new TreeMap<Integer, List<Lectures>>();
         tvCourse = new TextView(this);
         
@@ -110,6 +121,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 				return true;
 			}
 		});
+		lvLectureInfo.setAdapter(new LectureInfoAdapter(this, R.layout.lecture_info_layout, lectureInfo){
+			@Override
+			public boolean isEnabled(int position) {
+				return false;
+			}
+		});
         lvCourses.setChoiceMode(ListView.CHOICE_MODE_NONE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
@@ -126,15 +143,19 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
         lvLectures.setDividerHeight(2);
         lvLectures.setOnItemClickListener(this);
         rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth * 2 / 3 - 10, LODETabsActivity.scrHeight);
-        //rlCLParams.topMargin = 10;
         rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3 + 5;
         rlCL.addView(lvLectures, rlCLParams);
 
-//        rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth / 2, LODETabsActivity.scrHeight / 2);
-//        rlCLParams.topMargin = LODETabsActivity.scrHeight / 3;
-//        rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3;
-//        rlCL.addView(lvLectures, rlCLParams);
-	
+        rlCLParams = new RelativeLayout.LayoutParams((LODETabsActivity.scrWidth * 6) / 14, (LODETabsActivity.scrHeight * 6) / 14);
+        rlCLParams.topMargin = LODETabsActivity.scrHeight / 4;
+        rlCLParams.leftMargin = (LODETabsActivity.scrWidth * 28) / 100;
+        lvLectureInfo.setChoiceMode(ListView.CHOICE_MODE_NONE);
+        lvLectureInfo.setCacheColorHint(Color.parseColor("#00000000"));
+        lvLectureInfo.setBackgroundResource(R.layout.lecture_info);
+        lvLectureInfo.setDividerHeight(0);
+        lvLectureInfo.setVisibility(View.INVISIBLE);
+        rlCL.removeView(lvLectureInfo);
+        rlCL.addView(lvLectureInfo, rlCLParams);
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -146,6 +167,11 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 		}
 		parent.getChildAt(position).setBackgroundResource(R.layout.courses_corners_clicked);
 		if(parent.getId() == LV_COURSES){
+			lvLectures.setEnabled(false);
+			if(lvLectureInfo.getVisibility() == View.VISIBLE){
+				lvLectureInfo.setVisibility(View.INVISIBLE);
+			}
+			currPos = position;
 			tvItem = (TextView) parent.getItemAtPosition(position);
 			Iterator<Courses> selectedIterator = cs.iterator();
 			String title;
@@ -170,7 +196,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 								public void run() {
 									lectures.removeAll(lectures);
 						            tvItem = new TextView(coursesContext);
-						            String courseDetails = "Professor: " + selectedCourse.getDocentec() + "\n";
+						            String courseDetails = "Professor in charge: " + selectedCourse.getDocentec() + "\n";
 						            courseDetails+= "Academic Year: " + selectedCourse.getYear();
 						        	tvItem.setText(courseDetails);
 						        	lectures.add(tvItem);
@@ -186,6 +212,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 									for(int pos = 0; pos < lvLectures.getCount(); pos++){
 										lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
 									}
+									lvLectures.setEnabled(true);
 							        lvLectures.invalidateViews();
 								}
 							});
@@ -197,9 +224,26 @@ public class LODEclActivity extends Activity implements OnItemClickListener {
 			}
 		}
 		else if(parent.getId() == LV_LECTURES){
-			LayoutInflater inflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-			PopupWindow pw = new PopupWindow(inflater.inflate(R.layout.lecture_popup, null, false), 100, 100, true);
-			pw.showAtLocation(this.findViewById(R.id.rlCL), Gravity.CENTER, 0, 0);
+			tvInfoItem = new TextView(this);
+			tvInfoItem.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
+								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
+								+ cl.get(currPos).get(position - 1).getDocentel());
+			lectureInfo.removeAll(lectureInfo);
+			LectureInfo lecInfo = new LectureInfo(tvInfoItem, btnWatch, btnDownload, cl.get(currPos).get(position - 1).getUrllez());
+			lectureInfo.add(lecInfo);
+			lvLectureInfo.invalidateViews();
+			lvLectureInfo.setVisibility(View.VISIBLE);
+			lvLectures.setEnabled(false);
+			lvLectureInfo.bringToFront();
 		}
+	}
+	@Override
+	public void onBackPressed() {
+		if(lvLectureInfo.getVisibility() == View.VISIBLE){
+			lvLectureInfo.setVisibility(View.INVISIBLE);
+			lvLectures.setEnabled(true);
+		}
+		else
+			super.onBackPressed();
 	}
 }
