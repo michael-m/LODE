@@ -3,11 +3,9 @@ package it.unitn.lode;
 import it.unitn.lode.data.LodeSaxDataParser;
 import it.unitn.lode.data.TimedSlides;
 
-//import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
@@ -21,14 +19,12 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.net.Uri;
 import android.os.Bundle;
-//import android.os.Environment;
 import android.os.Handler;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -79,19 +75,26 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private ArrayList<TextView> slidePos = null;
 	private Intent fsIntent = null;
 	private Bundle fsBundle = null;
-	private String videoUrl = "";
 	private ProgressBar pbVideo = null;
 	private Iterator<TimedSlides> tsIterator = null;
 	private LodeSaxDataParser tsParser = null;
 	private List<TimedSlides> ts = null;
 	private final Context LodeActivityContext = this;
 	private Typeface tfApplegaramound = null;
+	private String videoUrl = null;
+	private String lectureDataUrl = null;
 	public static AssetManager ASSETS = null; 
+	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-
+        
+        Bundle watchBundle = getIntent().getExtras();
+        videoUrl = watchBundle.getString("videoUrl");
+        lectureDataUrl = watchBundle.getString("lectureDataUrl");
+        watchBundle = null;
+        
         ASSETS = getAssets();
         tfApplegaramound = Typeface.createFromAsset(ASSETS, "fonts/Applegaramound.ttf");
         flTimeline = (FrameLayout) findViewById(R.id.flTimeline);
@@ -163,7 +166,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         listPopulator = new Runnable() {
 			@Override
 			public void run() {
-		        tsParser = new LodeSaxDataParser("http://latemar.science.unitn.it/itunes/feeds/ScienzeMMFFNN/web_architectures/lecture1/TIMED_SLIDES.XML");
+		        tsParser = new LodeSaxDataParser(lectureDataUrl);
 		        ts = tsParser.parseSlides();
 		        tsIterator = ts.iterator();
 				handler.post(new Runnable() {
@@ -205,7 +208,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         vidView.setId(VIDEO);
 //        videoUrl = "http://itunes.unitn.it/itunes/archive" +
 //        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4";
-        videoUrl = "http://commonsware.com/misc/test2.3gp";
         vidView.setVideoURI(Uri.parse(videoUrl));
 
 //        File clip = new File(Environment.getExternalStorageDirectory(), "test2.3gp");
@@ -504,4 +506,12 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public void onPrepared(MediaPlayer mp) {
 		pbVideo.setVisibility(View.INVISIBLE);
 	}
+@Override
+public void onBackPressed() {
+	if(sdTimeline.isOpened()){
+		sdTimeline.animateClose();
+	}
+	else
+		super.onBackPressed();
+}
 }

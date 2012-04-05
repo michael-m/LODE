@@ -28,6 +28,7 @@ public class PlayInFullScreenActivity extends Activity implements OnPreparedList
 		vvFsVideo.setVideoPath(fsBundle.getString("VideoURL"));
 //		vvFsVideo = LODEActivity.vidView;
 		vvFsVideo.seekTo(fsBundle.getInt("CurrPos"));
+		fsBundle = null;
 		vvFsVideo.start();
 	}
 	@Override

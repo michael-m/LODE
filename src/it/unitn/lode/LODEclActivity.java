@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
@@ -49,15 +48,17 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	private TextView tvItem = null;
 	private final int LV_COURSES = 0;
 	private final int LV_LECTURES = 1;
-	private final int LV_LECTURE_INFO = 2;
+	//private final int LV_LECTURE_INFO = 2;
 	private int currPos = 0;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
+	private final String baseUrl = "http://latemar.science.unitn.it/itunes/feeds/";
+	public static Context CL_CONTEXT;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
         setContentView(R.layout.courses_lectures);
-
+        CL_CONTEXT = this;
         handler = new Handler();
         lvCourses = new ListView(this);
         lvCourses.setId(LV_COURSES);
@@ -68,6 +69,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 //        lvLectureInfo.setId(LV_LECTURE_INFO);
         
         rlCL = (RelativeLayout) findViewById(R.id.rlCL);
+        btnWatch = (ImageButton) findViewById(R.id.btnWatch);
         btnDownload = (ImageButton) findViewById(R.id.btnDownload);
 
         courses = new ArrayList<TextView>();
@@ -79,7 +81,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
         coursesPopulator = new Runnable() {
 			@Override
 			public void run() {
-				coursesParser = new LodeSaxDataParser("http://latemar.science.unitn.it/itunes/feeds/COURSES.XML");
+				coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
 		        cs = coursesParser.parseCourses();
 	            csIterator = cs.iterator();
 	            handler.post(new Runnable(){
@@ -184,7 +186,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 						@Override
 						public void run() {
 							if(cl.get(POSITION) == null){
-								String url = "http://latemar.science.unitn.it/itunes/feeds/" + selectedCourse.getFolderc() + "/LECTURES.XML";
+								String url = baseUrl + selectedCourse.getFolderc() + "/LECTURES.XML";
 								LodeSaxDataParser lecturesParser = new LodeSaxDataParser(url);
 								ls = lecturesParser.parseLectures();
 								cl.put(POSITION, ls);
@@ -229,7 +231,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
 								+ cl.get(currPos).get(position - 1).getDocentel());
 			lectureInfo.removeAll(lectureInfo);
-			LectureInfo lecInfo = new LectureInfo(tvInfoItem, btnWatch, btnDownload, cl.get(currPos).get(position - 1).getUrllez());
+			LectureInfo lecInfo = new LectureInfo(tvInfoItem, btnWatch, btnDownload, cl.get(currPos).get(position - 1).getUrllez(),
+					baseUrl + cl.get(currPos).get(position - 1).getFolderl() + "/TIMED_SLIDES.XML");
 			lectureInfo.add(lecInfo);
 			lvLectureInfo.invalidateViews();
 			lvLectureInfo.setVisibility(View.VISIBLE);
