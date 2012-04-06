@@ -232,7 +232,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								+ cl.get(currPos).get(position - 1).getDocentel());
 			lectureInfo.removeAll(lectureInfo);
 			LectureInfo lecInfo = new LectureInfo(tvInfoItem, btnWatch, btnDownload, cl.get(currPos).get(position - 1).getUrllez(),
-					baseUrl + cl.get(currPos).get(position - 1).getFolderl() + "/TIMED_SLIDES.XML");
+					baseUrl + cl.get(currPos).get(position - 1).getFolderl());
 			lectureInfo.add(lecInfo);
 			lvLectureInfo.invalidateViews();
 			lvLectureInfo.setVisibility(View.VISIBLE);

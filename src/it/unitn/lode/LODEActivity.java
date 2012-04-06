@@ -3,17 +3,28 @@ package it.unitn.lode;
 import it.unitn.lode.data.LodeSaxDataParser;
 import it.unitn.lode.data.TimedSlides;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.crypto.spec.IvParameterSpec;
+
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnPreparedListener;
@@ -61,12 +72,12 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	public static int currPos = 0;
-	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false;
+	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false, activityFirstRun = true;
 	public static boolean hasFinished = false;
 	private Handler handler = null;
 	private Runnable waitAndHide = null;
-	private Runnable sliderUpdater = null, listPopulator = null;
-	private Thread thread = null, dead = null, sliderThread = null;
+	private Runnable sliderUpdater = null, listPopulator = null, slideChanger = null;
+	private Thread thread = null, dead = null, sliderThread = null, slideChangerThread = null;
 	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
@@ -76,15 +87,17 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private Intent fsIntent = null;
 	private Bundle fsBundle = null;
 	private ProgressBar pbVideo = null;
-	private Iterator<TimedSlides> tsIterator = null;
+	private Iterator<TimedSlides> tsIterator = null, tsSlideIterator = null;
 	private LodeSaxDataParser tsParser = null;
-	private List<TimedSlides> ts = null;
+	private List<TimedSlides> ts = null, tsNext = null;
 	private final Context LodeActivityContext = this;
 	private Typeface tfApplegaramound = null;
 	private String videoUrl = null;
 	private String lectureDataUrl = null;
-	public static AssetManager ASSETS = null; 
-	
+	public static AssetManager ASSETS = null;
+	private ArrayList<Drawable>storedSlides = null;
+	private Iterator<TimedSlides>nextSlideIterator = null;
+	private Drawable singleSlide = null;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -102,6 +115,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 
         rlTimeline.setBackgroundResource(R.layout.timeline);
         
+        storedSlides = new ArrayList<Drawable>();
         handler = new Handler();
         waitAndHide = new Runnable(){
 			@Override
@@ -166,8 +180,10 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         listPopulator = new Runnable() {
 			@Override
 			public void run() {
-		        tsParser = new LodeSaxDataParser(lectureDataUrl);
+		        tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML");
 		        ts = tsParser.parseSlides();
+		        tsNext = ts;
+		        tsSlideIterator = ts.iterator();
 		        tsIterator = ts.iterator();
 				handler.post(new Runnable() {
 					@Override
@@ -192,7 +208,51 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			}
 		};
 		new Thread(listPopulator).start();
-        
+	
+		slideChanger = new Runnable() {
+			@Override
+			public void run() {
+				while(tsSlideIterator == null){
+					try{
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				nextSlideIterator = tsNext.iterator();
+				nextSlideIterator.next();
+				TimedSlides nextSlide, ts;
+				while(tsSlideIterator.hasNext()){
+					ts = tsSlideIterator.next();
+					if(nextSlideIterator.hasNext()){
+						nextSlide = nextSlideIterator.next();
+					}
+					else{
+						nextSlide = ts;
+					}
+					singleSlide = getSlide(lectureDataUrl + "/" + ts.getImmagine());
+					final TimedSlides tsFinal = ts;
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+							imView.setBackgroundDrawable(singleSlide);
+							tvTitle.setText(tsFinal.getTitolo());
+						}
+					});
+					try{
+						Log.e("sleeping for (seconds)", String.valueOf(nextSlide.getTempo() - ts.getTempo()));
+						Thread.sleep((nextSlide.getTempo() - ts.getTempo()) * 1000);
+						//Thread.sleep(nextSlide.getTempo() < 0 ? -1 * nextSlide.getTempo() : nextSlide.getTempo() * 10);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				singleSlide = null;
+			}
+		};
+//        slideChangerThread = new Thread(slideChanger);
+//        slideChangerThread.start();
+		
 		lvTimeline.setAdapter(new TimeLineAdapter(this, R.layout.slide_pos, slidePos){
 			@Override
 			public boolean isEnabled(int position) {
@@ -307,7 +367,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         rlMainParams.leftMargin = 170;
         rlMain.addView(sbSlider, rlMainParams);
 
-        imView.setImageResource(R.drawable.slide);
+        //imView.setImageResource(R.drawable.slide);
         imView.setBackgroundResource(R.layout.corners);
         imView.setScaleType(ScaleType.FIT_XY);
         rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
@@ -325,6 +385,11 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				pbVideo.bringToFront();
 				vidView.start();
 				new Thread(waitAndHide).start();
+				if(activityFirstRun){
+					activityFirstRun = false;
+			        slideChangerThread = new Thread(slideChanger);
+			        slideChangerThread.start();
+				}
 				if(sliderThread == null){
 					sliderThread = new Thread(sliderUpdater);
 					sliderThread.start();
@@ -506,12 +571,32 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public void onPrepared(MediaPlayer mp) {
 		pbVideo.setVisibility(View.INVISIBLE);
 	}
-@Override
-public void onBackPressed() {
-	if(sdTimeline.isOpened()){
-		sdTimeline.animateClose();
+	@Override
+	public void onBackPressed() {
+		if(sdTimeline.isOpened()){
+			sdTimeline.animateClose();
+		}
+		else{
+			super.onBackPressed();
+			dead = slideChangerThread;
+			slideChangerThread = null;
+			dead.interrupt();
+			this.finish();
+		}
 	}
-	else
-		super.onBackPressed();
-}
+	Drawable getSlide(String slideUrl){
+		Bitmap bitmap = null;
+		Drawable drSlide = null;
+	    try {
+		    URL thisUrl = new URL(slideUrl);
+		    HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
+		    conn.connect();
+		    InputStream input = conn.getInputStream();
+		    bitmap = BitmapFactory.decodeStream(input);
+		    drSlide = new BitmapDrawable(bitmap);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	    return drSlide;
+	}	
 }
