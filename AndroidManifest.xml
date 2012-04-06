@@ -20,7 +20,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LODEActivity" android:screenOrientation="landscape">
+            android:name=".LODEActivity" android:screenOrientation="landscape" android:noHistory="true">
         </activity>
 
         <activity

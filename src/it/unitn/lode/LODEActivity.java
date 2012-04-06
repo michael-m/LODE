@@ -10,6 +10,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 
 import javax.crypto.spec.IvParameterSpec;
 
@@ -77,7 +78,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private Handler handler = null;
 	private Runnable waitAndHide = null;
 	private Runnable sliderUpdater = null, listPopulator = null, slideChanger = null;
-	private Thread thread = null, dead = null, sliderThread = null, slideChangerThread = null;
+	private Thread thread = null, dead = null, sliderThread = null, slideChangerThread = null, slideGetterThread = null;
 	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
@@ -98,6 +99,10 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private ArrayList<Drawable>storedSlides = null;
 	private Iterator<TimedSlides>nextSlideIterator = null;
 	private Drawable singleSlide = null;
+	private TreeMap<Integer, String>timeAndSlide = null;
+	private static int vidViewCurrPos = 0;
+	private ArrayList<String> slideTitles = null;
+	private int progress = 0, prevProgress = 0;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -116,6 +121,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         rlTimeline.setBackgroundResource(R.layout.timeline);
         
         storedSlides = new ArrayList<Drawable>();
+        slideTitles = new ArrayList<String>();
         handler = new Handler();
         waitAndHide = new Runnable(){
 			@Override
@@ -141,12 +147,17 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 					handler.post(new Runnable() {
 						@Override
 						public void run() {
-							int progress = (vidView.getCurrentPosition() * 100) / vidView.getDuration();
-							sbSlider.setProgress(progress);
+							prevProgress = progress;
+							progress = vidView.getCurrentPosition();// * 100) / vidView.getDuration();
+							//Log.e("Progress:", String.valueOf(progress));
+							if(progress != prevProgress)
+								sbSlider.setProgress(progress);
 						}
 					});
 					try {
 						Thread.sleep(1000);
+						if(progress != prevProgress)
+							vidViewCurrPos++;
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -172,7 +183,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         slidePos = new ArrayList<TextView>();
         
         tvTitle.setGravity(Gravity.CENTER_HORIZONTAL);
-        tvTitle.setText("lecture1");
         tvTitle.setTextColor(Color.BLACK);
         tvTitle.setTextSize(14);
         tvTitle.setTypeface(tfApplegaramound, Typeface.BOLD);
@@ -183,7 +193,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		        tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML");
 		        ts = tsParser.parseSlides();
 		        tsNext = ts;
-		        tsSlideIterator = ts.iterator();
+		        tsSlideIterator = tsNext.iterator();
 		        tsIterator = ts.iterator();
 				handler.post(new Runnable() {
 					@Override
@@ -208,50 +218,73 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			}
 		};
 		new Thread(listPopulator).start();
-	
+		
 		slideChanger = new Runnable() {
+			Iterator<String> titleIterator = slideTitles.iterator();
 			@Override
 			public void run() {
-				while(tsSlideIterator == null){
-					try{
-						Thread.sleep(2000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+				singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
+				if(singleSlide == null){
+					Log.e("It's", "empty");
 				}
-				nextSlideIterator = tsNext.iterator();
-				nextSlideIterator.next();
-				TimedSlides nextSlide, ts;
-				while(tsSlideIterator.hasNext()){
-					ts = tsSlideIterator.next();
-					if(nextSlideIterator.hasNext()){
-						nextSlide = nextSlideIterator.next();
-					}
-					else{
-						nextSlide = ts;
-					}
-					singleSlide = getSlide(lectureDataUrl + "/" + ts.getImmagine());
-					final TimedSlides tsFinal = ts;
-					handler.post(new Runnable() {
-						@Override
-						public void run() {
-							imView.setBackgroundDrawable(singleSlide);
-							tvTitle.setText(tsFinal.getTitolo());
-						}
-					});
-					try{
-						Log.e("sleeping for (seconds)", String.valueOf(nextSlide.getTempo() - ts.getTempo()));
-						Thread.sleep((nextSlide.getTempo() - ts.getTempo()) * 1000);
-						//Thread.sleep(nextSlide.getTempo() < 0 ? -1 * nextSlide.getTempo() : nextSlide.getTempo() * 10);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+				handler.post(new Runnable() {
+				@Override
+				public void run() {
+					imView.setBackgroundDrawable(singleSlide);
+					if(titleIterator.hasNext())
+						tvTitle.setText(titleIterator.next());
 				}
-				singleSlide = null;
+			});
+
+//				while(tsNext == null){
+//					try{
+//						Thread.sleep(2000);
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
+//				List<TimedSlides> tsCollection = tsNext;
+//				timeAndSlide = new TreeMap<Integer, String>();
+//				while(tsCollection.iterator().hasNext()){
+//					TimedSlides singleItem = tsCollection.iterator().next();
+//					timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
+//				}
+//				tsCollection = null;
+//				
+//				nextSlideIterator = tsNext.iterator();
+//				nextSlideIterator.next();
+//				TimedSlides nextSlide, ts;
+//				while(tsSlideIterator.hasNext()){
+//					ts = tsSlideIterator.next();
+//					if(nextSlideIterator.hasNext()){
+//						nextSlide = nextSlideIterator.next();
+//					}
+//					else{
+//						nextSlide = ts;
+//					}
+//					singleSlide = getSlide(lectureDataUrl + "/" + ts.getImmagine());
+//					final TimedSlides tsFinal = ts;
+//					handler.post(new Runnable() {
+//						@Override
+//						public void run() {
+//							imView.setBackgroundDrawable(singleSlide);
+//							tvTitle.setText(tsFinal.getTitolo());
+//						}
+//					});
+//					try{
+//						Log.e("sleeping for (seconds)", String.valueOf(nextSlide.getTempo() - ts.getTempo()));
+//						Thread.sleep((nextSlide.getTempo() - ts.getTempo()) * 1000);
+//						//Thread.sleep(nextSlide.getTempo() < 0 ? -1 * nextSlide.getTempo() : nextSlide.getTempo() * 10);
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
+//				singleSlide = null;
 			}
 		};
-//        slideChangerThread = new Thread(slideChanger);
-//        slideChangerThread.start();
+		SlideDataGetter sdg = new SlideDataGetter();
+        slideGetterThread = new Thread(sdg);
+        slideGetterThread.start();
 		
 		lvTimeline.setAdapter(new TimeLineAdapter(this, R.layout.slide_pos, slidePos){
 			@Override
@@ -277,6 +310,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
         vidView.setOnPreparedListener(this);
+        
         vidView.setLongClickable(true);
         
         btnPlay = new ImageButton(this);
@@ -309,7 +343,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         sbSlider.setId(SLIDER);
         sbSlider.setThumbOffset(10);
         sbSlider.setProgressDrawable(getResources().getDrawable(R.layout.progress_slider));
-        sbSlider.setMax(100);
+//        sbSlider.setMax(vidView.getDuration());
         sbSlider.setProgress(0);
         sbSlider.setOnSeekBarChangeListener(this);
         
@@ -384,8 +418,10 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				btnPlay.setImageResource(R.drawable.ic_media_pause);
 				pbVideo.bringToFront();
 				vidView.start();
+		        sbSlider.setMax(vidView.getDuration());
 				new Thread(waitAndHide).start();
 				if(activityFirstRun){
+					vidViewCurrPos = 0;
 					activityFirstRun = false;
 			        slideChangerThread = new Thread(slideChanger);
 			        slideChangerThread.start();
@@ -522,6 +558,16 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			vidView.seekTo((vidView.getDuration() * progress) / 100);
 			isResuming = false;
 		}
+		Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
+		if(timeAndSlide.containsKey(vidViewCurrPos)){
+			if(slideChangerThread != null){
+				dead = slideChangerThread;
+				slideChangerThread = null;
+				dead.interrupt();
+			}
+	        slideChangerThread = new Thread(slideChanger);
+	        slideChangerThread.start();
+		}
 	}
 	@Override
 	public void onStartTrackingTouch(SeekBar seekBar) {
@@ -573,14 +619,28 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public void onBackPressed() {
+		super.onBackPressed();
+		vidViewCurrPos = 0;
+		sbSlider.setProgress(0);
+		if(slideChangerThread.isAlive()){
+			dead = slideChangerThread;
+			slideChangerThread = null;
+			dead.interrupt();
+		}			
+		if(slideGetterThread.isAlive()){
+			dead = slideGetterThread;
+			slideGetterThread = null;
+			dead.interrupt();
+		}
 		if(sdTimeline.isOpened()){
 			sdTimeline.animateClose();
 		}
 		else{
-			super.onBackPressed();
-			dead = slideChangerThread;
-			slideChangerThread = null;
-			dead.interrupt();
+			if(slideChangerThread != null){
+				dead = slideChangerThread;
+				slideChangerThread = null;
+				dead.interrupt();
+			}
 			this.finish();
 		}
 	}
@@ -598,5 +658,26 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			e.printStackTrace();
 		}
 	    return drSlide;
-	}	
+	}
+	private class SlideDataGetter implements Runnable{
+
+		@Override
+		public void run() {
+			while(tsSlideIterator == null){
+				try{
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			timeAndSlide = new TreeMap<Integer, String>();
+			while(tsSlideIterator.hasNext()){
+				TimedSlides singleItem = tsSlideIterator.next();
+				slideTitles.add(singleItem.getTitolo());
+				timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
+				Log.e(String.valueOf(singleItem.getTempo()), singleItem.getImmagine());
+			}
+		}
+		
+	}
 }
