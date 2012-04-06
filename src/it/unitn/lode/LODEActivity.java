@@ -78,7 +78,8 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private Handler handler = null;
 	private Runnable waitAndHide = null;
 	private Runnable sliderUpdater = null, listPopulator = null, slideChanger = null;
-	private Thread thread = null, dead = null, sliderThread = null, slideChangerThread = null, slideGetterThread = null;
+	private Thread thread = null, dead = null, sliderThread = null, slideChangerThread = null, slideGetterThread = null,
+			closestSetterThread = null;
 	private SlidingDrawer sdTimeline = null;
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
@@ -98,11 +99,14 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public static AssetManager ASSETS = null;
 	private ArrayList<Drawable>storedSlides = null;
 	private Iterator<TimedSlides>nextSlideIterator = null;
-	private Drawable singleSlide = null;
+	private Drawable singleSlide = null, closestSlide = null;
 	private TreeMap<Integer, String>timeAndSlide = null;
 	private static int vidViewCurrPos = 0;
 	private ArrayList<String> slideTitles = null;
 	private int progress = 0, prevProgress = 0;
+	private ArrayList<Integer> slideTempo;
+	private int slideTempoPointer = 0, sameSlidePointer = 0, closestTempo = Integer.MAX_VALUE;
+	private Runnable closestSlideUpdater = null;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,6 +126,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         
         storedSlides = new ArrayList<Drawable>();
         slideTitles = new ArrayList<String>();
+        slideTempo = new ArrayList<Integer>();
         handler = new Handler();
         waitAndHide = new Runnable(){
 			@Override
@@ -164,6 +169,24 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				}
 			}
         };
+        closestSlideUpdater = new Runnable(){
+			@Override
+			public void run() {
+				if(sameSlidePointer != slideTempoPointer){
+					sameSlidePointer = slideTempoPointer;
+					closestSlide = getSlide(timeAndSlide.get(slideTempoPointer));
+				}
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						if(closestSlide != null){
+							imView.setBackgroundDrawable(closestSlide);
+						}
+					}
+				});
+			}
+        };
+
         devDisplay = getWindowManager().getDefaultDisplay();
         scrWidth = devDisplay.getWidth();
         scrHeight = devDisplay.getHeight();
@@ -555,7 +578,9 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public void onProgressChanged(SeekBar seekBar, int progress,
 			boolean fromUser) {
 		if(fromUser || isResuming){
-			vidView.seekTo((vidView.getDuration() * progress) / 100);
+//			vidView.seekTo((vidView.getDuration() * progress) / 100);
+			vidView.seekTo(progress);
+			vidViewCurrPos = progress / 1000;
 			isResuming = false;
 		}
 		Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
@@ -567,6 +592,13 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			}
 	        slideChangerThread = new Thread(slideChanger);
 	        slideChangerThread.start();
+		}
+		else{
+			closestTempo = getClosestTempo(vidViewCurrPos * 1000);
+			if(closestSetterThread == null){
+				closestSetterThread = new Thread(closestSlideUpdater);
+				closestSetterThread.start();
+			}
 		}
 	}
 	@Override
@@ -622,12 +654,12 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		super.onBackPressed();
 		vidViewCurrPos = 0;
 		sbSlider.setProgress(0);
-		if(slideChangerThread.isAlive()){
+		if(slideChangerThread != null){
 			dead = slideChangerThread;
 			slideChangerThread = null;
 			dead.interrupt();
 		}			
-		if(slideGetterThread.isAlive()){
+		if(slideGetterThread != null){
 			dead = slideGetterThread;
 			slideGetterThread = null;
 			dead.interrupt();
@@ -660,7 +692,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	    return drSlide;
 	}
 	private class SlideDataGetter implements Runnable{
-
 		@Override
 		public void run() {
 			while(tsSlideIterator == null){
@@ -673,11 +704,31 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			timeAndSlide = new TreeMap<Integer, String>();
 			while(tsSlideIterator.hasNext()){
 				TimedSlides singleItem = tsSlideIterator.next();
+				slideTempo.add(singleItem.getTempo());
 				slideTitles.add(singleItem.getTitolo());
 				timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
 				Log.e(String.valueOf(singleItem.getTempo()), singleItem.getImmagine());
 			}
 		}
 		
+	}
+	private int getClosestTempo(int tempo){
+		Log.e("tempo:", String.valueOf(tempo));
+		int currentTempo;
+		int closestTempo = Integer.MAX_VALUE;
+		Iterator<Integer> closestIterator = slideTempo.iterator();
+		while(closestIterator.hasNext()){
+			currentTempo = closestIterator.next(); 
+			Log.e("currentTempo:", String.valueOf(currentTempo));
+			if(Math.abs(currentTempo - tempo) < Math.abs(closestTempo - tempo)){
+				closestTempo = currentTempo;
+			}
+			else if(Math.abs(currentTempo - tempo) == Math.abs(closestTempo - tempo)){
+				if(currentTempo < closestTempo)
+					closestTempo = currentTempo;
+			}
+		}
+		Log.e("closestTempo:", String.valueOf(closestTempo));
+		return closestTempo;
 	}
 }
