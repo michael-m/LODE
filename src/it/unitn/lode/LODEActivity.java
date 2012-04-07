@@ -11,9 +11,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
-
-import javax.crypto.spec.IvParameterSpec;
-
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
@@ -97,15 +94,13 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private String videoUrl = null;
 	private String lectureDataUrl = null;
 	public static AssetManager ASSETS = null;
-	private ArrayList<Drawable>storedSlides = null;
-	private Iterator<TimedSlides>nextSlideIterator = null;
 	private Drawable singleSlide = null, closestSlide = null;
 	private TreeMap<Integer, String>timeAndSlide = null;
 	private static int vidViewCurrPos = 0;
 	private ArrayList<String> slideTitles = null;
 	private int progress = 0, prevProgress = 0;
 	private ArrayList<Integer> slideTempo;
-	private int slideTempoPointer = 0, sameSlidePointer = 0, closestTempo = Integer.MAX_VALUE;
+	private int sameSlidePointer = 0, closestTempo = Integer.MAX_VALUE, currentTempo = 0;
 	private Runnable closestSlideUpdater = null;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -124,7 +119,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 
         rlTimeline.setBackgroundResource(R.layout.timeline);
         
-        storedSlides = new ArrayList<Drawable>();
         slideTitles = new ArrayList<String>();
         slideTempo = new ArrayList<Integer>();
         handler = new Handler();
@@ -172,14 +166,16 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         closestSlideUpdater = new Runnable(){
 			@Override
 			public void run() {
-				if(sameSlidePointer != slideTempoPointer){
-					sameSlidePointer = slideTempoPointer;
-					closestSlide = getSlide(timeAndSlide.get(slideTempoPointer));
+				Log.e("CLOSEST SLIDE UPDATER", "I'M BEING CALLED");
+				if(sameSlidePointer != closestTempo){
+					sameSlidePointer = closestTempo;
+					closestSlide = getSlide(timeAndSlide.get(closestTempo));
 				}
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
 						if(closestSlide != null){
+							Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
 							imView.setBackgroundDrawable(closestSlide);
 						}
 					}
@@ -583,7 +579,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			vidViewCurrPos = progress / 1000;
 			isResuming = false;
 		}
-		Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
+		//Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
 		if(timeAndSlide.containsKey(vidViewCurrPos)){
 			if(slideChangerThread != null){
 				dead = slideChangerThread;
@@ -594,8 +590,16 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	        slideChangerThread.start();
 		}
 		else{
-			closestTempo = getClosestTempo(vidViewCurrPos * 1000);
-			if(closestSetterThread == null){
+			closestTempo = getClosestTempo(vidViewCurrPos);
+			if(currentTempo != closestTempo){
+				currentTempo = closestTempo;
+				if(closestSetterThread != null){
+					Log.e("KILLING", "CLOSEST SETTER THREAD");
+					dead = closestSetterThread;
+					closestSetterThread = null;
+					dead.interrupt();
+				}
+				Log.e("CALLING", "CLOSEST SETTER THREAD");
 				closestSetterThread = new Thread(closestSlideUpdater);
 				closestSetterThread.start();
 			}
@@ -713,22 +717,24 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		
 	}
 	private int getClosestTempo(int tempo){
-		Log.e("tempo:", String.valueOf(tempo));
+		//Log.e("tempo:", String.valueOf(tempo));
 		int currentTempo;
 		int closestTempo = Integer.MAX_VALUE;
 		Iterator<Integer> closestIterator = slideTempo.iterator();
 		while(closestIterator.hasNext()){
 			currentTempo = closestIterator.next(); 
-			Log.e("currentTempo:", String.valueOf(currentTempo));
-			if(Math.abs(currentTempo - tempo) < Math.abs(closestTempo - tempo)){
-				closestTempo = currentTempo;
-			}
-			else if(Math.abs(currentTempo - tempo) == Math.abs(closestTempo - tempo)){
-				if(currentTempo < closestTempo)
+			//Log.e("currentTempo:", String.valueOf(currentTempo));
+			if(currentTempo < tempo){
+				if(Math.abs(currentTempo - tempo) < Math.abs(closestTempo - tempo)){
 					closestTempo = currentTempo;
+				}
+				else if(Math.abs(currentTempo - tempo) == Math.abs(closestTempo - tempo)){
+					if(currentTempo < closestTempo)
+						closestTempo = currentTempo;
+				}
 			}
 		}
-		Log.e("closestTempo:", String.valueOf(closestTempo));
+		//Log.e("closestTempo:", String.valueOf(closestTempo));
 		return closestTempo;
 	}
 }
