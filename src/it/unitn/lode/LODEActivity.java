@@ -33,14 +33,15 @@ import android.view.Display;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ImageView.ScaleType;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -52,17 +53,17 @@ import android.widget.SlidingDrawer;
 import android.widget.TextView;
 
 public class LODEActivity extends Activity implements OnClickListener, OnTouchListener,
-OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
-OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
+	OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
+	OnItemClickListener, OnPreparedListener, OnLongClickListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
-	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7;
+	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8;
 	private RelativeLayout rlMain = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
 	public static VidView vidView = null;
-	private ImageView imView = null;
+	private ImageView ivSlides = null, vidViewLayer;
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
 	private ImageButton btnPlay = null;
@@ -85,7 +86,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	private ArrayList<TextView> slidePos = null;
 	private Intent fsIntent = null;
 	private Bundle fsBundle = null;
-	private ProgressBar pbVideo = null;
+	private ProgressBar pbVideo = null, pbSlide = null;
 	private Iterator<TimedSlides> tsIterator = null, tsSlideIterator = null;
 	private LodeSaxDataParser tsParser = null;
 	private List<TimedSlides> ts = null, tsNext = null;
@@ -96,12 +97,13 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	public static AssetManager ASSETS = null;
 	private Drawable singleSlide = null, closestSlide = null;
 	private TreeMap<Integer, String>timeAndSlide = null;
-	private static int vidViewCurrPos = 0;
 	private ArrayList<String> slideTitles = null;
 	private int progress = 0, prevProgress = 0;
 	private ArrayList<Integer> slideTempo;
-	private int sameSlidePointer = 0, closestTempo = Integer.MAX_VALUE, currentTempo = 0;
+	private int closestTempo = Integer.MAX_VALUE, currentTempo = 0;
 	private Runnable closestSlideUpdater = null;
+	private boolean isFromTimeline = false, slideIsLarge = false, videoIsLarge = false;;
+	private int vidViewCurrPos;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -147,18 +149,15 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 						@Override
 						public void run() {
 							prevProgress = progress;
-							progress = vidView.getCurrentPosition();// * 100) / vidView.getDuration();
-							//Log.e("Progress:", String.valueOf(progress));
+							progress = vidView.getCurrentPosition();
 							if(progress != prevProgress)
 								sbSlider.setProgress(progress);
 						}
 					});
 					try {
 						Thread.sleep(1000);
-						if(progress != prevProgress)
-							vidViewCurrPos++;
 					} catch (InterruptedException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					}
 				}
 			}
@@ -167,21 +166,17 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			@Override
 			public void run() {
 				Log.e("CLOSEST SLIDE UPDATER", "I'M BEING CALLED");
-				if(sameSlidePointer != closestTempo){
-					sameSlidePointer = closestTempo;
 					closestSlide = getSlide(timeAndSlide.get(closestTempo));
-				}
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
-						if(closestSlide != null){
-							Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
-							imView.setBackgroundDrawable(closestSlide);
-						}
+						Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
+						ivSlides.setImageDrawable(closestSlide);
 					}
 				});
 			}
-        };
+        };				
+
 
         devDisplay = getWindowManager().getDefaultDisplay();
         scrWidth = devDisplay.getWidth();
@@ -193,11 +188,20 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         tvTitle = new TextView(this);
         tvTitle.setId(TITLE);
 
-        imView = new ImageView(this);
-        imView.setId(SLIDE);
-        imView.setOnClickListener(this);
+        ivSlides = new ImageView(this);
+        ivSlides.setId(SLIDE);
+        ivSlides.setOnClickListener(this);
+        ivSlides.setOnLongClickListener(this);
         
         lvTimeline = (ListView) findViewById(R.id.lvTimeline);
+        lvTimeline.setOnItemClickListener(this);
+
+        //lvTimeline.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        lvTimeline.setCacheColorHint(Color.parseColor("#00000000"));
+        //lvTimeline.setBackgroundResource(R.layout.courses_corners);
+        lvTimeline.setSelector(R.layout.courses_corners_clicked);
+        lvTimeline.setDividerHeight(2);
+        lvTimeline.setOnItemClickListener(this);
 
         slidePos = new ArrayList<TextView>();
         
@@ -232,6 +236,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			            tvSlidePos = new TextView(LodeActivityContext);
 			        	tvSlidePos.setText("End");
 			        	slidePos.add(tvSlidePos);
+			        	lvTimeline.invalidateViews();
 					}
 				});
 			}
@@ -242,63 +247,29 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			Iterator<String> titleIterator = slideTitles.iterator();
 			@Override
 			public void run() {
-				singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
-				if(singleSlide == null){
-					Log.e("It's", "empty");
+				if(timeAndSlide.containsKey(vidViewCurrPos)){
+					singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
+					if(singleSlide == null){
+						Log.e("It's", "empty");
+					}
 				}
 				handler.post(new Runnable() {
 				@Override
 				public void run() {
-					imView.setBackgroundDrawable(singleSlide);
-					if(titleIterator.hasNext())
-						tvTitle.setText(titleIterator.next());
+					if(singleSlide != null){
+						pbSlide.setVisibility(View.VISIBLE);
+						pbSlide.bringToFront();
+						ivSlides.setImageDrawable(singleSlide);
+						ivSlides.bringToFront();
+						flTimeline.bringToFront();
+						if(titleIterator.hasNext()){
+							tvTitle.setText(titleIterator.next());
+							tvTitle.bringToFront();
+						}
+						
+					}
 				}
 			});
-
-//				while(tsNext == null){
-//					try{
-//						Thread.sleep(2000);
-//					} catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//				}
-//				List<TimedSlides> tsCollection = tsNext;
-//				timeAndSlide = new TreeMap<Integer, String>();
-//				while(tsCollection.iterator().hasNext()){
-//					TimedSlides singleItem = tsCollection.iterator().next();
-//					timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
-//				}
-//				tsCollection = null;
-//				
-//				nextSlideIterator = tsNext.iterator();
-//				nextSlideIterator.next();
-//				TimedSlides nextSlide, ts;
-//				while(tsSlideIterator.hasNext()){
-//					ts = tsSlideIterator.next();
-//					if(nextSlideIterator.hasNext()){
-//						nextSlide = nextSlideIterator.next();
-//					}
-//					else{
-//						nextSlide = ts;
-//					}
-//					singleSlide = getSlide(lectureDataUrl + "/" + ts.getImmagine());
-//					final TimedSlides tsFinal = ts;
-//					handler.post(new Runnable() {
-//						@Override
-//						public void run() {
-//							imView.setBackgroundDrawable(singleSlide);
-//							tvTitle.setText(tsFinal.getTitolo());
-//						}
-//					});
-//					try{
-//						Log.e("sleeping for (seconds)", String.valueOf(nextSlide.getTempo() - ts.getTempo()));
-//						Thread.sleep((nextSlide.getTempo() - ts.getTempo()) * 1000);
-//						//Thread.sleep(nextSlide.getTempo() < 0 ? -1 * nextSlide.getTempo() : nextSlide.getTempo() * 10);
-//					} catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//				}
-//				singleSlide = null;
 			}
 		};
 		SlideDataGetter sdg = new SlideDataGetter();
@@ -313,25 +284,22 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				return true;
 			}
 		});
-        //lvTimeline.setOnItemSelectedListener(this);
-        lvTimeline.setOnItemClickListener(this);
         vidView = new VidView(this);
         vidView.setBackgroundResource(R.layout.corners);
         vidView.setId(VIDEO);
-//        videoUrl = "http://itunes.unitn.it/itunes/archive" +
-//        		"/ScienzeMMFFNN/ProgrammazioneAndroid/video/02_Introduzione_2012-02-23b.mp4";
         vidView.setVideoURI(Uri.parse(videoUrl));
-
-//        File clip = new File(Environment.getExternalStorageDirectory(), "test2.3gp");
-//        vidView.setVideoPath(clip.getAbsolutePath());
-//        videoUrl = clip.getAbsolutePath();
-
-        vidView.setOnTouchListener(this);
+        //vidView.setOnLongClickListener(this);
+        //vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
         vidView.setOnPreparedListener(this);
+        //vidView.setLongClickable(true);
         
-        vidView.setLongClickable(true);
-        
+        vidViewLayer = new ImageView(this);
+        vidViewLayer.setId(VIDEO_LAYER);
+        vidViewLayer.setOnLongClickListener(this);
+        vidViewLayer.setOnClickListener(this);
+        vidViewLayer.setBackgroundColor(Color.TRANSPARENT);
+
         btnPlay = new ImageButton(this);
         btnF = new ImageButton(this);
         btnR = new ImageButton(this);
@@ -339,6 +307,8 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         sbSlider = new SeekBar(this);
         pbVideo = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
         pbVideo.setVisibility(View.GONE);
+        pbSlide = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
+        //pbSlide.setVisibility(View.GONE);
 
         hideMc();
 
@@ -362,7 +332,6 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         sbSlider.setId(SLIDER);
         sbSlider.setThumbOffset(10);
         sbSlider.setProgressDrawable(getResources().getDrawable(R.layout.progress_slider));
-//        sbSlider.setMax(vidView.getDuration());
         sbSlider.setProgress(0);
         sbSlider.setOnSeekBarChangeListener(this);
         
@@ -379,55 +348,65 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
         sdTimeline.setClickable(false);
 
         sdTimeline.setOnDrawerOpenListener(this);
-
+        sdTimeline.setEnabled(false);
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, 30);
         rlMainParams.topMargin = 10;
         rlMainParams.leftMargin = 0;
         rlMain.addView(tvTitle, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, scrHeight * 3 / 4);
-        rlMainParams.topMargin = 30;
-        rlMainParams.leftMargin = 10;
+        rlMainParams.topMargin = 0;
+        rlMainParams.leftMargin = 0;
         rlMain.addView(vidView, rlMainParams);
 
+        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, scrHeight * 3 / 4);
+        rlMainParams.topMargin = 0;
+        rlMainParams.leftMargin = 0;
+        rlMain.addView(vidViewLayer, rlMainParams);
+        
         rlMainParams = new RelativeLayout.LayoutParams(30, 30);
         rlMainParams.topMargin = scrHeight * 3 / 8;
         rlMainParams.leftMargin = scrHeight * 3 / 8;
         rlMain.addView(pbVideo, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
-        rlMainParams.leftMargin = 20;
+        rlMainParams.topMargin = scrHeight * 3 / 4 - 60;
+        rlMainParams.leftMargin = 10;
         rlMain.addView(btnPlay, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
-        rlMainParams.leftMargin = 70;
+        rlMainParams.topMargin = scrHeight * 3 / 4 - 60;
+        rlMainParams.leftMargin = 60;
         rlMain.addView(btnR, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
-        rlMainParams.leftMargin = 120;
+        rlMainParams.topMargin = scrHeight * 3 / 4 - 60;
+        rlMainParams.leftMargin = 110;
         rlMain.addView(btnF, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = 30;
-        rlMainParams.leftMargin = 10;
+        rlMainParams.topMargin = 0;
+        rlMainParams.leftMargin = 0;
         rlMain.addView(btnFullScreen, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 180 , 50);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 30;
-        rlMainParams.leftMargin = 170;
+        rlMainParams.topMargin = scrHeight * 3 / 4 - 60;
+        rlMainParams.leftMargin = 160;
         rlMain.addView(sbSlider, rlMainParams);
 
-        //imView.setImageResource(R.drawable.slide);
-        imView.setBackgroundResource(R.layout.corners);
-        imView.setScaleType(ScaleType.FIT_XY);
+        ivSlides.setBackgroundResource(R.layout.corners);
+        ivSlides.setBackgroundColor(Color.WHITE);
+        ivSlides.setScaleType(ScaleType.FIT_XY);
         rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
         rlMainParams.topMargin = 30;
         rlMainParams.leftMargin = scrHeight * 3 / 4 + scrHeight / 30;
         rlMainParams.rightMargin = 10;
-        rlMain.addView(imView, rlMainParams);
+        rlMain.addView(ivSlides, rlMainParams);
+
+        rlMainParams = new RelativeLayout.LayoutParams(30, 30);
+        rlMainParams.topMargin = scrHeight * 3 / 8 + 15;
+        rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
+        rlMain.addView(pbSlide, rlMainParams);
 	}
 	@Override
 	public void onClick(View view) {
@@ -440,8 +419,8 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		        sbSlider.setMax(vidView.getDuration());
 				new Thread(waitAndHide).start();
 				if(activityFirstRun){
-					vidViewCurrPos = 0;
 					activityFirstRun = false;
+					vidViewCurrPos = slideTempo.get(0);
 			        slideChangerThread = new Thread(slideChanger);
 			        slideChangerThread.start();
 				}
@@ -458,6 +437,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				dead = sliderThread;
 				sliderThread = null;
 				dead.interrupt();
+				
 			}
 		}
 		else if(view.getId() == FF){
@@ -491,6 +471,26 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 			}
 			fullScreen = true;
 			startActivity(fsIntent);
+		}
+		else if(view.getId() == VIDEO_LAYER){
+			if(btnPlay.getVisibility() == View.INVISIBLE){
+				showMc();
+				if(!isStarted){
+					isStarted = true;
+				}
+				else{
+					if(thread != null){
+						dead = thread;
+						thread = null;
+						dead.interrupt();
+					}
+				}
+				thread = new Thread(waitAndHide);
+				thread.start();
+			}
+			if(sdTimeline.isOpened()){
+				sdTimeline.close();
+			}
 		}
 	}
 	@Override
@@ -526,24 +526,26 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public boolean onTouch(View view, MotionEvent event) {
-		if(view.getId() == VIDEO){
-			if(btnPlay.getVisibility() == View.INVISIBLE){
-				showMc();
-				if(!isStarted){
-					isStarted = true;
-				}
-				else{
-					dead = thread;
-					thread = null;
-					dead.interrupt();
-				}
-				thread = new Thread(waitAndHide);
-				thread.start();
-			}
-			if(sdTimeline.isOpened()){
-				sdTimeline.close();
-			}
-		}
+//		if(view.getId() == VIDEO || view.getId() == VIDEO_LAYER){
+//			if(btnPlay.getVisibility() == View.INVISIBLE){
+//				showMc();
+//				if(!isStarted){
+//					isStarted = true;
+//				}
+//				else{
+//					if(thread != null){
+//						dead = thread;
+//						thread = null;
+//						dead.interrupt();
+//					}
+//				}
+//				thread = new Thread(waitAndHide);
+//				thread.start();
+//			}
+//			if(sdTimeline.isOpened()){
+//				sdTimeline.close();
+//			}
+//		}
 		return false;
 	}
 	public void hideMc(){
@@ -572,16 +574,41 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress,
-			boolean fromUser) {
-		if(fromUser || isResuming){
-//			vidView.seekTo((vidView.getDuration() * progress) / 100);
+			boolean isFromUser) {
+		if(isFromUser || isResuming || isFromTimeline){
+			if(isFromTimeline)
+				Log.d("OnProgressChanged", "Progress Changed from timeline");
+			if(isFromUser)
+				Log.d("OnProgressChanged", "Progress Changed by user");
+			if(isResuming)
+				Log.d("OnProgressChanged", "is Resuming");
 			vidView.seekTo(progress);
-			vidViewCurrPos = progress / 1000;
+//			if(!isFromTimeline){
+//				if(videoIsLarge){
+//					shrinkVideo();
+//				}
+//				else{
+//					if(slideIsLarge){
+//						shrinkSlide();
+//					}
+//					growVideo();
+//				}
+//			}
+//			else{
+//				isFromTimeline = false;
+//			}
+			isFromTimeline = false;
 			isResuming = false;
 		}
 		//Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
+//		if(timeAndSlide.containsKey(vidView.getCurrentPosition() / 1000)){
+		vidViewCurrPos = progress / 1000;
 		if(timeAndSlide.containsKey(vidViewCurrPos)){
+			if(isFromUser){
+				Log.d("OnProgressChanged", "contains key");
+			}
 			if(slideChangerThread != null){
+				Log.e("SLIDE CHANGER THREAD", "I'M STILL ALIVE");
 				dead = slideChangerThread;
 				slideChangerThread = null;
 				dead.interrupt();
@@ -590,7 +617,11 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	        slideChangerThread.start();
 		}
 		else{
+			if(isFromUser){
+				Log.d("OnProgressChanged", "does not contain key");
+			}
 			closestTempo = getClosestTempo(vidViewCurrPos);
+			Log.d("closestTempo", String.valueOf(closestTempo));
 			if(currentTempo != closestTempo){
 				currentTempo = closestTempo;
 				if(closestSetterThread != null){
@@ -607,13 +638,9 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public void onStartTrackingTouch(SeekBar seekBar) {
-		// TODO Auto-generated method stub
-		
 	}
 	@Override
 	public void onStopTrackingTouch(SeekBar seekBar) {
-		// TODO Auto-generated method stub
-		
 	}
 	@Override
 	public void onScrollEnded() {
@@ -624,24 +651,19 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public void onScrollStarted() {
-		// TODO Auto-generated method stub
-		
 	}
 	@Override
 	public void onDrawerOpened() {
 	}
 	@Override
-	public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2,
-			long arg3) {
-		sdTimeline.animateClose();
-	}
-	@Override
-	public void onNothingSelected(AdapterView<?> arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		Log.e("Timeline - position", String.valueOf(position));
+		if(parent.getId() == R.id.lvTimeline){
+			isFromTimeline = true;
+			//vidView.seekTo(slideTempo.get(position - 1));
+			//Log.e("slideTempo.get value: ", String.valueOf(slideTempo.get(position - 1)));
+			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
+		}
 		sdTimeline.animateClose();
 	}
 	@Override
@@ -651,12 +673,13 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 	}
 	@Override
 	public void onPrepared(MediaPlayer mp) {
+		sdTimeline.setEnabled(true);
 		pbVideo.setVisibility(View.INVISIBLE);
+		onClick(btnPlay);
 	}
 	@Override
 	public void onBackPressed() {
 		super.onBackPressed();
-		vidViewCurrPos = 0;
 		sbSlider.setProgress(0);
 		if(slideChangerThread != null){
 			dead = slideChangerThread;
@@ -711,7 +734,7 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 				slideTempo.add(singleItem.getTempo());
 				slideTitles.add(singleItem.getTitolo());
 				timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
-				Log.e(String.valueOf(singleItem.getTempo()), singleItem.getImmagine());
+				//Log.e(String.valueOf(singleItem.getTempo()), singleItem.getImmagine());
 			}
 		}
 		
@@ -736,5 +759,105 @@ OnItemSelectedListener, OnItemClickListener, OnPreparedListener{
 		}
 		//Log.e("closestTempo:", String.valueOf(closestTempo));
 		return closestTempo;
+	}
+	@Override
+	public boolean onLongClick(View v) {
+		if(v.getId() == SLIDE){
+			if(slideIsLarge){
+				shrinkSlide();
+			}
+			else{
+				if(videoIsLarge){
+					shrinkVideo();
+				}
+				growSlide();
+			}
+		}
+		else if(v.getId() == VIDEO){
+			if(videoIsLarge){
+				shrinkVideo();
+			}
+			else{
+				if(slideIsLarge){
+					shrinkSlide();
+				}
+				growVideo();
+			}
+		}
+		else if(v.getId() == VIDEO_LAYER){
+			if(videoIsLarge){
+				shrinkVideo();
+			}
+			else{
+				if(slideIsLarge){
+					shrinkSlide();
+				}
+				growVideo();
+			}
+			btnPlay.bringToFront();
+			btnF.bringToFront();
+			btnR.bringToFront();
+			btnFullScreen.bringToFront();
+			sbSlider.bringToFront();
+		}
+		return false;
+	}
+	public void growSlide(){
+		slideIsLarge = true;
+        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+		rlMainParams.width = (scrWidth * 2) / 3;
+		rlMainParams.height = scrHeight;
+		rlMainParams.leftMargin = (scrWidth / 3);
+		rlMain.removeView(ivSlides);
+		rlMain.addView(ivSlides, rlMainParams);
+        flTimeline.bringToFront();
+	}
+	public void shrinkSlide(){
+		slideIsLarge = false;
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
+        rlMainParams.topMargin = 30;
+        rlMainParams.leftMargin = scrHeight * 3 / 4 + scrHeight / 30;
+        rlMainParams.rightMargin = 10;
+		rlMain.removeView(ivSlides);
+        rlMain.addView(ivSlides, rlMainParams);
+        flTimeline.bringToFront();
+	}
+	public void growVideo(){
+		if(vidView.isPlaying()){
+			videoIsLarge = true;
+			LayoutParams vidParams = vidView.getLayoutParams();
+			vidParams.width = (scrWidth * 2) / 3;
+			vidParams.height = scrHeight;
+			vidView.setLayoutParams(vidParams);
+			vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+			vidView.requestLayout();
+			vidView.invalidate();
+			vidView.bringToFront();
+
+			vidParams = vidViewLayer.getLayoutParams();
+			vidParams.width = (scrWidth * 2) / 3;
+			vidParams.height = scrHeight;
+			vidViewLayer.setLayoutParams(vidParams);
+			
+			flTimeline.bringToFront();
+		}
+	}
+	public void shrinkVideo(){
+		videoIsLarge = false;
+		LayoutParams vidParams = vidView.getLayoutParams();
+		vidParams.width = (scrHeight * 3) / 4;
+		vidParams.height = (scrHeight * 3) / 4;
+		vidView.setLayoutParams(vidParams);
+		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+		vidView.requestLayout();
+		vidView.invalidate();
+		vidView.bringToFront();
+
+		vidParams = vidViewLayer.getLayoutParams();
+		vidParams.width = (scrHeight * 3) / 4;
+		vidParams.height = (scrHeight * 3) / 4;
+		vidViewLayer.setLayoutParams(vidParams);
+
+		flTimeline.bringToFront();
 	}
 }

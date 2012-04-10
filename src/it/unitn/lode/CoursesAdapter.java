@@ -34,10 +34,7 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
             TextView textViewTwo = (TextView) v.findViewById(R.id.tvCourses);
             if (textViewTwo != null) {
                 textViewTwo.setText(tv.getText());
-                // put the id to identify the item clicked
                 textViewTwo.setTag(tv.getId());
-                textViewTwo.setFocusable(false);
-                textViewTwo.setClickable(false);
                 
                 if(position == 0){
                     textViewTwo.setTextSize(15);
@@ -54,5 +51,4 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
         }
         return v;
     }
-
 }

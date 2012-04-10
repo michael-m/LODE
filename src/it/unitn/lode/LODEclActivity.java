@@ -26,7 +26,7 @@ import android.widget.TextView;
 public class LODEclActivity extends Activity implements OnItemClickListener{
 	private ListView lvCourses = null;
 	private ListView lvLectures = null;
-	private ListView lvLectureInfo = null;
+	public static ListView lvLectureInfo = null;
 	private ArrayList<TextView> courses = null;
 	private ArrayList<TextView> lectures = null;
 	private ArrayList<LectureInfo> lectureInfo = null;
@@ -48,12 +48,14 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	private TextView tvItem = null;
 	private final int LV_COURSES = 0;
 	private final int LV_LECTURES = 1;
+	private final int LV_LECTURE_INFO = 2;
 	//private final int LV_LECTURE_INFO = 2;
 	private int currPos = 0;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
 	private final String baseUrl = "http://latemar.science.unitn.it/itunes/feeds/";
 	public static Context CL_CONTEXT;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -64,9 +66,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
         lvCourses.setId(LV_COURSES);
         lvLectures = new ListView(this);
         lvLectures.setId(LV_LECTURES);
-        //lvLectureInfo = new ListView(this);
         lvLectureInfo = (ListView) findViewById(R.id.lvLectureInfo);
-//        lvLectureInfo.setId(LV_LECTURE_INFO);
+        lvLectureInfo.setId(LV_LECTURE_INFO);
         
         rlCL = (RelativeLayout) findViewById(R.id.rlCL);
         btnWatch = (ImageButton) findViewById(R.id.btnWatch);
@@ -98,7 +99,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 				            tvCourse = new TextView(coursesContext);
 				        	tvCourse.setText(title);
 				        	courses.add(tvCourse);
-				        	//Log.e("Title: ", title);
 				        }
 				        lvCourses.invalidateViews();
 					}
@@ -106,7 +106,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 			}
 		};
 		new Thread(coursesPopulator).start();
-		
         lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses){
 			@Override
 			public boolean isEnabled(int position) {
@@ -129,21 +128,23 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 				return false;
 			}
 		});
-        lvCourses.setChoiceMode(ListView.CHOICE_MODE_NONE);
+        //lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
+        lvCourses.setSelector(R.layout.courses_corners_clicked);
         lvCourses.setDividerHeight(2);
         lvCourses.setOnItemClickListener(this);
+        
         rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth / 3, LODETabsActivity.scrHeight);
-        //rlCLParams.topMargin = 10;
-        //rlCLParams.leftMargin = 10;
         rlCL.addView(lvCourses, rlCLParams);
 
-        lvLectures.setChoiceMode(ListView.CHOICE_MODE_NONE);
+        lvLectures.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvLectures.setCacheColorHint(Color.parseColor("#00000000"));
         lvLectures.setBackgroundResource(R.layout.courses_corners);
+        lvLectures.setSelector(R.layout.courses_corners_clicked);
         lvLectures.setDividerHeight(2);
         lvLectures.setOnItemClickListener(this);
+        
         rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth * 2 / 3 - 10, LODETabsActivity.scrHeight);
         rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3 + 5;
         rlCL.addView(lvLectures, rlCLParams);
@@ -161,13 +162,9 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		parent.setSelection(position);
+		Log.e("On item click", "being called");
 		final Integer POSITION = position;
-		for(int pos = 0; pos < parent.getCount(); pos++){
-			if(pos != position){
-				parent.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
-			}
-		}
-		parent.getChildAt(position).setBackgroundResource(R.layout.courses_corners_clicked);
 		if(parent.getId() == LV_COURSES){
 			lvLectures.setEnabled(false);
 			if(lvLectureInfo.getVisibility() == View.VISIBLE){
@@ -209,7 +206,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 							            tvItem = new TextView(coursesContext);
 							        	tvItem.setText(lTitle);
 							        	lectures.add(tvItem);
-							        	//Log.e("Title: ", lTitle);
 							        }
 									for(int pos = 0; pos < lvLectures.getCount(); pos++){
 										lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));

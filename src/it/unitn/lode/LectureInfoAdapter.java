@@ -28,8 +28,10 @@ public class LectureInfoAdapter extends ArrayAdapter<LectureInfo> implements OnC
 	private String lectureDataUrl = null;
 	private final int LV_WIDTH = (LODETabsActivity.scrWidth * 6) / 14;
 	private final int LV_HEIGHT = (LODETabsActivity.scrHeight * 6) / 14;
+	private Context context = null;
 	public LectureInfoAdapter(Context context, int textViewResourceId, ArrayList<LectureInfo> lectureInfo) {
         super(context, textViewResourceId, lectureInfo);
+        this.context = context;
         this.lectureInfo = lectureInfo;
         this.tfApplegaramound = Typeface.createFromAsset(LODETabsActivity.ASSETS, "fonts/Applegaramound.ttf");
     }
@@ -91,9 +93,9 @@ public class LectureInfoAdapter extends ArrayAdapter<LectureInfo> implements OnC
 		bundle.putString("videoUrl", this.videoUrl);
 		bundle.putString("lectureDataUrl", this.lectureDataUrl);
 		
-		Intent intent = new Intent(LODEclActivity.CL_CONTEXT, LODEActivity.class);
+		Intent intent = new Intent(context, LODEActivity.class);
+		//LODEclActivity.lvLectureInfo.setVisibility(View.GONE);
 		intent.putExtras(bundle);
-		LODEclActivity.CL_CONTEXT.startActivity(intent);
+		context.startActivity(intent);
 	}
-
 }

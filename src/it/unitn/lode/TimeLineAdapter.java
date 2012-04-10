@@ -13,7 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-public class TimeLineAdapter extends ArrayAdapter<TextView> implements OnClickListener {
+public class TimeLineAdapter extends ArrayAdapter<TextView>{
 	private ArrayList<TextView> slidePos;
 	private Typeface tfApplegaramound = null;
 
@@ -34,12 +34,16 @@ public class TimeLineAdapter extends ArrayAdapter<TextView> implements OnClickLi
         TextView tv = slidePos.get(position);
         if (tv != null) {
             TextView textViewTwo = (TextView) v.findViewById(R.id.tvSlidePos);
+            //textViewTwo.setOnClickListener(this);
             if (textViewTwo != null) {
                 textViewTwo.setText(tv.getText());
                 // put the id to identify the item clicked
                 textViewTwo.setTag(tv.getId());
-                textViewTwo.setFocusable(false);
-                textViewTwo.setClickable(false);
+                //textViewTwo.setFocusable(false);
+                //textViewTwo.setClickable(false);
+                if(textViewTwo.isSelected()){
+                	textViewTwo.setBackgroundResource(R.layout.courses_corners_clicked);
+                }
                 if(position == 0 || position == slidePos.size() - 1){
                 	textViewTwo.setTextSize(14);
                 	textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD_ITALIC);
@@ -52,15 +56,8 @@ public class TimeLineAdapter extends ArrayAdapter<TextView> implements OnClickLi
                 	textViewTwo.setPadding(15, 5, 10, 5);
                 	textViewTwo.setGravity(Gravity.LEFT);
                 }
-//                textViewTwo.setOnClickListener(this);
             }
         }
         return v;
-    }
-
-    @Override
-    public void onClick(View v) {
-        Log.d("Sample", "Clicked on tag: " + v.getTag());
-        // Do something here, like start new activity.
     }
 }
