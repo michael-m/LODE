@@ -36,13 +36,14 @@ public final class R {
         public static final int flTimeline=0x7f05000b;
         public static final int handle_v=0x7f05000d;
         public static final int llFsVideo=0x7f050004;
-        public static final int llTabs=0x7f050014;
+        public static final int llTabs=0x7f050015;
         public static final int lvLectureInfo=0x7f050002;
         public static final int lvTimeline=0x7f05000f;
         public static final int pbFsVideo=0x7f050005;
+        public static final int rlBottomBar=0x7f050012;
         public static final int rlCL=0x7f050001;
         public static final int rlLectureInfo=0x7f050006;
-        public static final int rlLectures=0x7f050012;
+        public static final int rlLectures=0x7f050013;
         public static final int rlMain=0x7f05000a;
         public static final int rlMc=0x7f050010;
         public static final int rlSlide=0x7f050011;
@@ -50,7 +51,7 @@ public final class R {
         public static final int sdTimeline=0x7f05000c;
         public static final int tvCourses=0x7f050000;
         public static final int tvLectureInfo=0x7f050007;
-        public static final int tvSlidePos=0x7f050013;
+        public static final int tvSlidePos=0x7f050014;
         public static final int vvFsVideo=0x7f050003;
     }
     public static final class layout {

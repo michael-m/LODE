@@ -57,11 +57,11 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
 	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8;
-	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null;
+	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
 	public static VidView vidView = null;
-	private ImageView ivSlides = null, vidViewLayer;
+	private ImageView ivSlides = null, vidViewLayer = null, ivBottomBar = null;
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
 	private ImageButton btnPlay = null;
@@ -193,8 +193,9 @@ public class LODEActivity extends Activity implements OnClickListener,
         
         rlMc = (RelativeLayout) findViewById(R.id.rlMc);
         rlMc.setBackgroundColor(Color.TRANSPARENT);
-        rlMc.setBackgroundResource(R.layout.curved_corners);
+//        rlMc.setBackgroundResource(R.layout.curved_corners);
 
+        
         rlSlide = (RelativeLayout) findViewById(R.id.rlSlide);
         rlSlide.setBackgroundColor(Color.TRANSPARENT);
         rlSlide.setBackgroundResource(R.layout.curved_corners);
@@ -316,6 +317,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         vidViewLayer.setOnLongClickListener(this);
         vidViewLayer.setOnClickListener(this);
         vidViewLayer.setBackgroundColor(Color.TRANSPARENT);
+//        vidViewLayer.setBackgroundResource(R.layout.curved_corners);
 
         btnPlay = new ImageButton(this);
         btnF = new ImageButton(this);
@@ -382,7 +384,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMainParams.leftMargin = 0;
         rlMain.addView(vidViewLayer, rlMainParams);
         
-        rlMainParams = new RelativeLayout.LayoutParams(30, 30);
+        rlMainParams = new RelativeLayout.LayoutParams(25, 25);
         rlMainParams.topMargin = scrHeight * 3 / 8;
         rlMainParams.leftMargin = scrHeight * 3 / 8;
         rlMain.addView(pbVideo, rlMainParams);
@@ -451,7 +453,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMainParams.leftMargin = 0;
         rlSlide.addView(ivSlides, rlMainParams);
         
-        rlMainParams = new RelativeLayout.LayoutParams(30, 30);
+        rlMainParams = new RelativeLayout.LayoutParams(25, 25);
         rlMainParams.topMargin = scrHeight * 3 / 8 + 15;
         rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
         rlMain.addView(pbSlide, rlMainParams);
@@ -503,7 +505,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 					vidView.getCurrentPosition() - 10000 : 
 						0);
 		}
-		else if(view.getId() == SLIDE || view.getId() == R.id.rlSlide){
+		else if(view.getId() == SLIDE){
 			if(sdTimeline.isOpened()){
 				sdTimeline.animateClose();
 			}
@@ -530,7 +532,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			fullScreen = true;
 			startActivity(fsIntent);
 		}
-		else if(view.getId() == VIDEO_LAYER){
+		else if(view.getId() == VIDEO_LAYER || view.getId() == VIDEO){
 			if(sdTimeline.isOpened()){
 				sdTimeline.close();
 			}
@@ -555,6 +557,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				vidView.invalidate();
 				rlMc.bringToFront();
 				btnFullScreen.bringToFront();
+				vidViewLayer.bringToFront();
 			}
 		}
 		else if(view.getId() == R.id.rlMain){
@@ -708,10 +711,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 		Log.e("Timeline - position", String.valueOf(position));
 		if(parent.getId() == R.id.lvTimeline){
 			isFromTimeline = true;
-			//vidView.seekTo(slideTempo.get(position - 1));
-			//Log.e("slideTempo.get value: ", String.valueOf(slideTempo.get(position - 1)));
 			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
 		}
+		parent.setSelection(position);
 		sdTimeline.animateClose();
 	}
 	@Override
@@ -902,7 +904,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 			vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
 			vidView.requestLayout();
 			vidView.invalidate();
-			vidView.bringToFront();
 
 			vidParams = vidViewLayer.getLayoutParams();
 			vidParams.width = (scrWidth * 2) / 3;
@@ -916,6 +917,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 	        rlMain.addView(rlMc, rlMainParams);
 
 	        rlMc.bringToFront();
+			vidView.bringToFront();
+			vidViewLayer.bringToFront();
 	        btnFullScreen.bringToFront();
 			flTimeline.bringToFront();
 		}
