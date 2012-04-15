@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
+
+import android.util.FloatMath;
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
@@ -20,6 +22,8 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.PointF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -31,16 +35,18 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnLongClickListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ImageView.ScaleType;
 import android.widget.ProgressBar;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ImageView.ScaleType;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -56,16 +62,17 @@ public class LODEActivity extends Activity implements OnClickListener,
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
-	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8;
+	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8, RESET = 9;
 	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null;
 	public static VidView vidView = null;
-	private ImageView ivSlides = null, vidViewLayer = null, ivBottomBar = null;
+	private ImageView ivSlides = null, vidViewLayer = null;
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
 	private ImageButton btnPlay = null;
 	private ImageButton btnFullScreen = null;
+	private ImageButton btnResetSlide = null;
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	public static int currPos = 0;
@@ -102,6 +109,11 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private Runnable closestSlideUpdater = null;
 	private boolean isFromTimeline = false, slideIsLarge = false, videoIsLarge = false;;
 	private int vidViewCurrPos;
+	private Matrix defaultMatrix = null, currMatrix = null, prevMatrix = null;
+	private int mode;
+	private static final int ZOOM = 0, DRAG = 1, NONE = 2;
+	private PointF start = null, mid = null;
+	private float prevDist = 1f;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -133,7 +145,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
-						hideMc();
+//						hideMc();
 						isStarted = false;
 					}
 				});
@@ -163,13 +175,15 @@ public class LODEActivity extends Activity implements OnClickListener,
         closestSlideUpdater = new Runnable(){
 			@Override
 			public void run() {
-				Log.e("CLOSEST SLIDE UPDATER", "I'M BEING CALLED");
+//				Log.e("CLOSEST SLIDE UPDATER", "I'M BEING CALLED");
 					closestSlide = getSlide(timeAndSlide.get(closestTempo));
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
-						Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
-						ivSlides.setBackgroundDrawable(closestSlide);
+//						Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
+						pbSlide.setVisibility(View.VISIBLE);
+						ivSlides.setImageDrawable(closestSlide);
+						pbSlide.setVisibility(View.GONE);
 						rlSlide.bringToFront();
 						flTimeline.bringToFront();
 						if(videoIsLarge){
@@ -192,9 +206,13 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMain.setOnClickListener(this);
         
         rlMc = (RelativeLayout) findViewById(R.id.rlMc);
-        rlMc.setBackgroundColor(Color.TRANSPARENT);
-//        rlMc.setBackgroundResource(R.layout.curved_corners);
+        //rlMc.setBackgroundColor(Color.TRANSPARENT);
+        rlMc.setBackgroundResource(R.drawable.a9p_09_11_00015);
 
+        rlBottomBar = (RelativeLayout) findViewById(R.id.rlBottomBar);
+        rlBottomBar.setBackgroundResource(android.R.drawable.bottom_bar);
+        //rlBottomBar.setBackgroundResource(R.drawable.a9p_09_11_00063);
+        rlBottomBar.setGravity(Gravity.CENTER_VERTICAL);
         
         rlSlide = (RelativeLayout) findViewById(R.id.rlSlide);
         rlSlide.setBackgroundColor(Color.TRANSPARENT);
@@ -208,6 +226,96 @@ public class LODEActivity extends Activity implements OnClickListener,
         ivSlides.setId(SLIDE);
         ivSlides.setOnClickListener(this);
         ivSlides.setOnLongClickListener(this);
+        ivSlides.setScaleType(ImageView.ScaleType.FIT_XY);
+
+        start = new PointF();
+        mid = new PointF();
+        currMatrix = new Matrix();
+        prevMatrix = new Matrix();
+        defaultMatrix = new Matrix();
+        
+        
+        
+
+        
+        
+        
+        
+        
+        ivSlides.setOnTouchListener(new OnTouchListener() {
+			
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+//				dumpEvent(event);
+				if(v.getId() == SLIDE){
+					ImageView view = (ImageView) v;
+					view.setScaleType(ImageView.ScaleType.MATRIX);
+					
+					switch(event.getAction() & MotionEvent.ACTION_MASK){
+					case MotionEvent.ACTION_DOWN:{
+						prevMatrix.set(currMatrix);
+						start.set(event.getX(), event.getY());
+						mode = DRAG;
+				         Log.e("TAG", "mode=DRAG");
+						break;
+					}
+					case MotionEvent.ACTION_UP:{
+						mode = NONE;
+				         Log.e("TAG", "mode=NONE");
+						break;
+					}
+					case MotionEvent.ACTION_MOVE:{
+						if(mode == DRAG){
+							currMatrix.set(prevMatrix);
+							currMatrix.postTranslate(event.getX() - start.x, event.getY() - start.y);
+							
+						}
+						else if (mode == ZOOM) {
+							float newDist = spacing(event);
+							if (newDist > 10f) {
+								currMatrix.set(prevMatrix);
+								float scale = newDist / prevDist;
+								currMatrix.postScale(scale, scale, mid.x, mid.y);
+							}
+				          }
+					break;
+					}
+					case MotionEvent.ACTION_POINTER_DOWN:{
+				         prevDist = spacing(event);
+				         if (prevDist > 10f) {
+				            prevMatrix.set(currMatrix);
+				            midPoint(mid, event);
+				            mode = ZOOM;
+					         Log.e("TAG", "mode=ZOOM");
+				         }
+						break;
+					}
+					case MotionEvent.ACTION_POINTER_UP:{
+						mode = NONE;
+						break;
+					}
+					default:
+						break;
+					}
+					view.setImageMatrix(currMatrix);
+					view.requestLayout();
+					view.invalidate();
+				}
+				return true;
+			}
+		});
+        
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         lvTimeline = (ListView) findViewById(R.id.lvTimeline);
         lvTimeline.setOnItemClickListener(this);
@@ -245,7 +353,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				            tvSlidePos = new TextView(LodeActivityContext);
 				        	tvSlidePos.setText(title);
 				        	slidePos.add(tvSlidePos);
-				        	Log.e("Title: ", title);
+//				        	Log.e("Title: ", title);
 				        }
 			            tvSlidePos = new TextView(LodeActivityContext);
 			        	tvSlidePos.setText("End");
@@ -264,7 +372,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				if(timeAndSlide.containsKey(vidViewCurrPos)){
 					singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
 					if(singleSlide == null){
-						Log.e("It's", "empty");
+//						Log.e("It's", "empty");
 					}
 				}
 				handler.post(new Runnable() {
@@ -273,7 +381,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 					if(singleSlide != null){
 						pbSlide.setVisibility(View.VISIBLE);
 						pbSlide.bringToFront();
-						ivSlides.setBackgroundDrawable(singleSlide);
+						pbSlide.setVisibility(View.VISIBLE);
+						ivSlides.setImageDrawable(singleSlide);
+						pbSlide.setVisibility(View.GONE);
 						rlSlide.bringToFront();
 						if(titleIterator.hasNext()){
 							tvTitle.setText(titleIterator.next());
@@ -327,9 +437,14 @@ public class LODEActivity extends Activity implements OnClickListener,
         pbVideo = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
         pbVideo.setVisibility(View.GONE);
         pbSlide = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
+        
+        btnResetSlide = new ImageButton(this);
+        btnResetSlide.setId(RESET);
+        btnResetSlide.setBackgroundResource(android.R.drawable.btn_minus);
+        btnResetSlide.setOnClickListener(this);
         //pbSlide.setVisibility(View.GONE);
 
-        hideMc();
+//        hideMc();
 
         btnFullScreen.setOnClickListener(this);
         btnFullScreen.setImageResource(R.drawable.fullscreen);
@@ -337,15 +452,15 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnFullScreen.setBackgroundColor(Color.TRANSPARENT);
         
         btnPlay.setOnClickListener(this);
-        btnPlay.setImageResource(R.drawable.ic_media_play);
+        btnPlay.setImageResource(android.R.drawable.ic_media_play);
         btnPlay.setId(PLAY);
         
         btnF.setOnClickListener(this);
-        btnF.setImageResource(R.drawable.ic_media_ff);
+        btnF.setImageResource(android.R.drawable.ic_media_ff);
         btnF.setId(FF);
         
         btnR.setOnClickListener(this);
-        btnR.setImageResource(R.drawable.ic_media_rew);
+        btnR.setImageResource(android.R.drawable.ic_media_rew);
         btnR.setId(RR);
         
         sbSlider.setId(SLIDER);
@@ -374,12 +489,13 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMainParams.leftMargin = 0;
         rlMain.addView(tvTitle, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 + 5, scrHeight * 4 / 5);
+//        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 + 5, scrHeight * 4 / 5);
+        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
         rlMainParams.topMargin = 0;
         rlMainParams.leftMargin = 0;
         rlMain.addView(vidView, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 + 5, scrHeight * 3 / 4);
+        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
         rlMainParams.topMargin = 0;
         rlMainParams.leftMargin = 0;
         rlMain.addView(vidViewLayer, rlMainParams);
@@ -409,12 +525,31 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMainParams.leftMargin = 160;
         rlMc.addView(sbSlider, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 + 5, 60);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 40;
+        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
+        rlMainParams.topMargin = (scrHeight * 15) / 24;
         rlMainParams.leftMargin = 0;
         rlMc.setGravity(Gravity.CENTER_VERTICAL);
         rlMain.removeView(rlMc);
         rlMain.addView(rlMc, rlMainParams);
+        
+//        rlMainParams = new RelativeLayout.LayoutParams(scrWidth , 80);
+//        rlMainParams.topMargin = 0;
+//        rlMainParams.leftMargin = 0;
+//        rlBottomBar.addView(ibBottomBar, rlMainParams);
+
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - 6, 80);
+        rlMainParams.topMargin = scrHeight - 83;
+        rlMainParams.leftMargin = 3;
+        rlMain.removeView(rlBottomBar);
+        rlMain.addView(rlBottomBar, rlMainParams);
+
+        rlMainParams = new RelativeLayout.LayoutParams(60, 50);
+        rlMainParams.width = LayoutParams.WRAP_CONTENT;
+        rlMainParams.height = LayoutParams.WRAP_CONTENT;
+        rlMainParams.topMargin = 0;
+        rlMainParams.leftMargin = scrWidth - 110;
+        rlBottomBar.addView(btnResetSlide, rlMainParams);
+
 //        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
 //        rlMainParams.topMargin = scrHeight * 3 / 4 - 60;
 //        rlMainParams.leftMargin = 10;
@@ -440,15 +575,14 @@ public class LODEActivity extends Activity implements OnClickListener,
 //        rlMainParams.leftMargin = 160;
 //        rlMain.addView(sbSlider, rlMainParams);
 
-        ivSlides.setBackgroundColor(Color.WHITE);
-        ivSlides.setScaleType(ScaleType.FIT_XY);
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
+//        ivSlides.setBackgroundColor(Color.WHITE);
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
         rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = scrHeight * 3 / 4 + 10;
+        rlMainParams.leftMargin = (scrHeight * 5) / 6;
         rlMain.removeView(rlSlide);
         rlMain.addView(rlSlide, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
         rlMainParams.topMargin = 0;
         rlMainParams.leftMargin = 0;
         rlSlide.addView(ivSlides, rlMainParams);
@@ -468,14 +602,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 		if(view.getId() == PLAY){
 			if(playState == 0){
 				playState = 1;
-				btnPlay.setImageResource(R.drawable.ic_media_pause);
+				btnPlay.setImageResource(android.R.drawable.ic_media_pause);
 				pbVideo.bringToFront();
 				vidView.start();
 		        sbSlider.setMax(vidView.getDuration());
-				new Thread(waitAndHide).start();
+				//new Thread(waitAndHide).start();
 				if(activityFirstRun){
 					activityFirstRun = false;
-					vidViewCurrPos = slideTempo.get(0);
+					if(slideTempo != null){
+						vidViewCurrPos = slideTempo.get(0);
+					}
+					else{
+						vidViewCurrPos = 0;
+					}
 			        slideChangerThread = new Thread(slideChanger);
 			        slideChangerThread.start();
 				}
@@ -487,7 +626,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 			else{
 				playState = 0;
-				btnPlay.setImageResource(R.drawable.ic_media_play);
+				btnPlay.setImageResource(android.R.drawable.ic_media_play);
 				vidView.pause();
 				dead = sliderThread;
 				sliderThread = null;
@@ -496,13 +635,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 		}
 		else if(view.getId() == FF){
-			vidView.seekTo(vidView.getCurrentPosition() + 10000 < vidView.getDuration() ?
-					vidView.getCurrentPosition() + 10000 : 
+			vidView.seekTo(vidView.getCurrentPosition() + 500 < vidView.getDuration() ?
+					vidView.getCurrentPosition() + 500 : 
 						vidView.getDuration() - 1);
 		}
 		else if(view.getId() == RR){
-			vidView.seekTo(vidView.getCurrentPosition() - 10000 > 0 ?
-					vidView.getCurrentPosition() - 10000 : 
+			vidView.seekTo(vidView.getCurrentPosition() - 500 > 0 ?
+					vidView.getCurrentPosition() - 500 : 
 						0);
 		}
 		else if(view.getId() == SLIDE){
@@ -513,6 +652,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				rlSlide.bringToFront();
 				vidView.requestLayout();
 				vidView.invalidate();
+				flTimeline.bringToFront();
 			}
 		}
 		else if(view.getId() == FS){
@@ -538,32 +678,41 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 			else{
 				if(btnPlay.getVisibility() == View.INVISIBLE){
-					showMc();
+//					showMc();
 					if(!isStarted){
 						isStarted = true;
 					}
-					else{
-						if(thread != null){
-							dead = thread;
-							thread = null;
-							dead.interrupt();
-						}
-					}
-					thread = new Thread(waitAndHide);
-					thread.start();
+//					else{
+//						if(thread != null){
+//							dead = thread;
+//							thread = null;
+//							dead.interrupt();
+//						}
+//					}
+//					thread = new Thread(waitAndHide);
+//					thread.start();
 				}
 				vidView.bringToFront();
 				vidView.requestLayout();
 				vidView.invalidate();
-				rlMc.bringToFront();
 				btnFullScreen.bringToFront();
 				vidViewLayer.bringToFront();
+				rlMc.bringToFront();
 			}
 		}
 		else if(view.getId() == R.id.rlMain){
 			if(sdTimeline.isOpened()){
 				sdTimeline.animateClose();
 			}
+		}
+		else if(view.getId() == RESET){
+			defaultMatrix.postScale(0, 0, (scrWidth - (scrHeight * 5) / 6) / 2, (((scrHeight * 15) / 24) + 70) / 2);
+			ivSlides.setScaleType(ScaleType.FIT_XY);
+			ivSlides.setImageMatrix(defaultMatrix);
+			start = new PointF();
+			mid = new PointF();
+			currMatrix = new Matrix(); 
+			prevMatrix = new Matrix(); 
 		}
 	}
 	@Override
@@ -598,17 +747,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 	}
 	public void hideMc(){
+		rlMc.setVisibility(View.GONE);
+		btnFullScreen.setVisibility(View.GONE);
 		btnPlay.setVisibility(View.INVISIBLE);
 		btnF.setVisibility(View.INVISIBLE);
 		btnR.setVisibility(View.INVISIBLE);
-		btnFullScreen.setVisibility(View.INVISIBLE);
 		sbSlider.setVisibility(View.INVISIBLE);
 	}
 	public void showMc(){
+		rlMc.setVisibility(View.VISIBLE);
+		btnFullScreen.setVisibility(View.VISIBLE);
 		btnPlay.setVisibility(View.VISIBLE);
 		btnF.setVisibility(View.VISIBLE);
 		btnR.setVisibility(View.VISIBLE);
-		btnFullScreen.setVisibility(View.VISIBLE);
 		sbSlider.setVisibility(View.VISIBLE);
 	}
 	@Override
@@ -621,18 +772,21 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		sbSlider.setProgress(0);
 		playState = 0;
-		showMc();
+//		showMc();
 	}
 	@Override
 	public void onProgressChanged(SeekBar seekBar, int progress,
 			boolean isFromUser) {
 		if(isFromUser || isResuming || isFromTimeline){
-			if(isFromTimeline)
-				Log.d("OnProgressChanged", "Progress Changed from timeline");
-			if(isFromUser)
-				Log.d("OnProgressChanged", "Progress Changed by user");
-			if(isResuming)
-				Log.d("OnProgressChanged", "is Resuming");
+			if(isFromTimeline){
+//				Log.d("OnProgressChanged", "Progress Changed from timeline");
+			}
+			if(isFromUser){
+//				Log.d("OnProgressChanged", "Progress Changed by user");
+			}
+			if(isResuming){
+//				Log.d("OnProgressChanged", "is Resuming");
+			}
 			vidView.seekTo(progress);
 //			if(!isFromTimeline){
 //				if(videoIsLarge){
@@ -656,10 +810,10 @@ public class LODEActivity extends Activity implements OnClickListener,
 		vidViewCurrPos = progress / 1000;
 		if(timeAndSlide.containsKey(vidViewCurrPos)){
 			if(isFromUser){
-				Log.d("OnProgressChanged", "contains key");
+//				Log.d("OnProgressChanged", "contains key");
 			}
 			if(slideChangerThread != null){
-				Log.e("SLIDE CHANGER THREAD", "I'M STILL ALIVE");
+//				Log.e("SLIDE CHANGER THREAD", "I'M STILL ALIVE");
 				dead = slideChangerThread;
 				slideChangerThread = null;
 				dead.interrupt();
@@ -669,19 +823,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		else{
 			if(isFromUser){
-				Log.d("OnProgressChanged", "does not contain key");
+//				Log.d("OnProgressChanged", "does not contain key");
 			}
 			closestTempo = getClosestTempo(vidViewCurrPos);
-			Log.d("closestTempo", String.valueOf(closestTempo));
+//			Log.d("closestTempo", String.valueOf(closestTempo));
 			if(currentTempo != closestTempo){
 				currentTempo = closestTempo;
 				if(closestSetterThread != null){
-					Log.e("KILLING", "CLOSEST SETTER THREAD");
+//					Log.e("KILLING", "CLOSEST SETTER THREAD");
 					dead = closestSetterThread;
 					closestSetterThread = null;
 					dead.interrupt();
 				}
-				Log.e("CALLING", "CLOSEST SETTER THREAD");
+//				Log.e("CALLING", "CLOSEST SETTER THREAD");
 				closestSetterThread = new Thread(closestSlideUpdater);
 				closestSetterThread.start();
 			}
@@ -697,7 +851,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	public void onScrollEnded() {
 		flTimeline.bringToFront();
 		if(sdTimeline.isOpened()){
-			sdTimeline.close();
+			sdTimeline.animateClose();
 		}
 	}
 	@Override
@@ -708,7 +862,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		Log.e("Timeline - position", String.valueOf(position));
+//		Log.e("Timeline - position", String.valueOf(position));
 		if(parent.getId() == R.id.lvTimeline){
 			isFromTimeline = true;
 			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
@@ -877,13 +1031,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 			sdTimeline.animateClose();
 		}
 		slideIsLarge = false;
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
         rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = scrHeight * 3 / 4 + 10;
+        rlMainParams.leftMargin = (scrHeight * 5) / 6;
 		rlMain.removeView(rlSlide);
         rlMain.addView(rlSlide, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - scrHeight * 3 / 4, scrHeight * 4 / 5);
+        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
         rlMainParams.topMargin = 0;
         rlMainParams.leftMargin = 0;
 		rlSlide.removeView(ivSlides);
@@ -898,7 +1052,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		if(vidView.isPlaying()){
 			videoIsLarge = true;
 			LayoutParams vidParams = vidView.getLayoutParams();
-			vidParams.width = (scrWidth * 2) / 3;
+			vidParams.width = (scrWidth * 3) / 4;
 			vidParams.height = scrHeight;
 			vidView.setLayoutParams(vidParams);
 			vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
@@ -906,11 +1060,12 @@ public class LODEActivity extends Activity implements OnClickListener,
 			vidView.invalidate();
 
 			vidParams = vidViewLayer.getLayoutParams();
-			vidParams.width = (scrWidth * 2) / 3;
+			vidParams.width = (scrWidth * 3) / 4;
 			vidParams.height = scrHeight;
 			vidViewLayer.setLayoutParams(vidParams);
 			
-	        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, scrHeight * 3 / 4);
+	        rlMainParams = new RelativeLayout.LayoutParams((scrWidth * 3) / 4, 70);
+	        rlMc.setGravity(Gravity.CENTER);
 	        rlMainParams.topMargin = scrHeight - 60;
 	        rlMainParams.leftMargin = 0;
 	        rlMain.removeView(rlMc);
@@ -929,8 +1084,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		videoIsLarge = false;
 		LayoutParams vidParams = vidView.getLayoutParams();
-		vidParams.width = ((scrHeight * 3) / 4) + 5;
-		vidParams.height = (scrHeight * 4) / 5;
+		vidParams.width = (scrHeight * 5) / 6;
+		vidParams.height = (scrHeight * 15) / 24;
 		vidView.setLayoutParams(vidParams);
 		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
 		vidView.requestLayout();
@@ -942,8 +1097,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 		vidParams.height = (scrHeight * 3) / 4;
 		vidViewLayer.setLayoutParams(vidParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 + 5, 60);
-        rlMainParams.topMargin = scrHeight * 3 / 4 - 40;
+        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
+        rlMainParams.topMargin = (scrHeight * 15) / 24;;
         rlMainParams.leftMargin = 0;
         rlMc.setGravity(Gravity.CENTER_VERTICAL);
         rlMain.removeView(rlMc);
@@ -953,4 +1108,42 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnFullScreen.bringToFront();
 		flTimeline.bringToFront();
 	}
-}
+	private void dumpEvent(MotionEvent event) {
+		   String names[] = { "DOWN" , "UP" , "MOVE" , "CANCEL" , "OUTSIDE" ,
+		      "POINTER_DOWN" , "POINTER_UP" , "7?" , "8?" , "9?" };
+		   StringBuilder sb = new StringBuilder();
+		   int action = event.getAction();
+		   int actionCode = action & MotionEvent.ACTION_MASK;
+		   sb.append("event ACTION_" ).append(names[actionCode]);
+		   if (actionCode == MotionEvent.ACTION_POINTER_DOWN
+		         || actionCode == MotionEvent.ACTION_POINTER_UP) {
+		      sb.append("(pid " ).append(
+		      action >> MotionEvent.ACTION_POINTER_ID_SHIFT);
+		      sb.append(")" );
+		   }
+		   sb.append("[" );
+		   for (int i = 0; i < event.getPointerCount(); i++) {
+		      sb.append("#" ).append(i);
+		      sb.append("(pid " ).append(event.getPointerId(i));
+		      sb.append(")=" ).append((int) event.getX(i));
+		      sb.append("," ).append((int) event.getY(i));
+		      if (i + 1 < event.getPointerCount())
+		         sb.append(";" );
+		   }
+		   sb.append("]" );
+		   Log.d("TOUCH_EVENT", sb.toString());
+		}
+	   /** Determine the space between the first two fingers */
+	   private float spacing(MotionEvent event) {
+	      float x = event.getX(0) - event.getX(1);
+	      float y = event.getY(0) - event.getY(1);
+	      return FloatMath.sqrt(x * x + y * y);
+	   }
+
+	   /** Calculate the mid point of the first two fingers */
+	   private void midPoint(PointF point, MotionEvent event) {
+	      float x = event.getX(0) + event.getX(1);
+	      float y = event.getY(0) + event.getY(1);
+	      point.set(x / 2, y / 2);
+	   }
+	}

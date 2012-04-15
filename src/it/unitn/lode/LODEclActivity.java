@@ -92,7 +92,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 			            tvCourse = new TextView(coursesContext);
 			        	tvCourse.setText("\nAvailable Courses");
 			        	courses.add(tvCourse);
-			        	Log.e("Title: ", "Available Courses");
+//			        	Log.e("Title: ", "Available Courses");
 				        while(csIterator.hasNext()){
 				        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
 				        	title = title.trim();
@@ -163,7 +163,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		parent.setSelection(position);
-		Log.e("On item click", "being called");
+//		Log.e("On item click", "being called");
 		final Integer POSITION = position;
 		if(parent.getId() == LV_COURSES){
 			lvLectures.setEnabled(false);
@@ -187,7 +187,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								LodeSaxDataParser lecturesParser = new LodeSaxDataParser(url);
 								ls = lecturesParser.parseLectures();
 								cl.put(POSITION, ls);
-					        	Log.e("Retrieving from: ", "online");
+//					        	Log.e("Retrieving from: ", "online");
 							}
 							lsIterator = cl.get(POSITION).iterator();
 							handler.post(new Runnable() {
