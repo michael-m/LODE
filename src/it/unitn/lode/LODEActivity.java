@@ -119,6 +119,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private PointF start = null, mid = null;
 	private float prevDist = 1f;
 	private static long duration = 0;
+	private boolean slidesReady = false, isMediumSize = false;
 
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -204,20 +205,27 @@ public class LODEActivity extends Activity implements OnClickListener,
 			@Override
 			public void run() {
 //				Log.e("CLOSEST SLIDE UPDATER", "I'M BEING CALLED");
+				//Log.e("SYNC", "I AM WAITING");
+				while(!slidesReady){}
+				//Log.e("TEMPO", String.valueOf(closestTempo));
+				if(timeAndSlide.get(closestTempo) != null){
 					closestSlide = getSlide(timeAndSlide.get(closestTempo));
+				}
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
 //						Log.e("CLOSEST SLIDE UPDATER", "I'M CHANGING THE SLIDE");
-						pbSlide.setVisibility(View.VISIBLE);
-						ivSlides.setImageDrawable(closestSlide);
-						pbSlide.setVisibility(View.GONE);
-						rlSlide.bringToFront();
-						flTimeline.bringToFront();
-						if(videoIsLarge){
-							vidView.bringToFront();
-							rlMc.bringToFront();
-							btnFullScreen.bringToFront();
+						if(closestSlide != null){
+							pbSlide.setVisibility(View.VISIBLE);
+							ivSlides.setImageDrawable(closestSlide);
+							pbSlide.setVisibility(View.GONE);
+							rlSlide.bringToFront();
+							flTimeline.bringToFront();
+							if(videoIsLarge){
+								vidView.bringToFront();
+								rlMc.bringToFront();
+								btnFullScreen.bringToFront();
+							}
 						}
 					}
 				});
@@ -366,10 +374,12 @@ public class LODEActivity extends Activity implements OnClickListener,
 			Iterator<String> titleIterator = slideTitles.iterator();
 			@Override
 			public void run() {
-				if(timeAndSlide.containsKey(vidViewCurrPos)){
-					singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
-					if(singleSlide == null){
-//						Log.e("It's", "empty");
+				if(timeAndSlide != null){
+					if(timeAndSlide.containsKey(vidViewCurrPos)){
+						singleSlide = getSlide(timeAndSlide.get(vidViewCurrPos));
+						if(singleSlide == null){
+//							Log.e("It's", "empty");
+						}
 					}
 				}
 				handler.post(new Runnable() {
@@ -489,8 +499,10 @@ public class LODEActivity extends Activity implements OnClickListener,
         tvTime = new TextView(this);
         tvTime.setBackgroundResource(R.layout.no_stroke);
         tvTime.setTypeface(tfApplegaramound);
+        tvTime.setTextSize(12);
         tvTime.setTextColor(Color.BLACK);
-        tvTime.setGravity(Gravity.CENTER);
+        tvTime.setPadding(0, 15, 0, 0);
+        tvTime.setGravity(Gravity.LEFT);
         tvTime.setText("00:00");
         
         rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4, 30);
@@ -529,14 +541,14 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMainParams.leftMargin = 105;
         rlMc.addView(btnF, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 200 , 50);
+        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 220 , 50);
         rlMainParams.topMargin = 0;
         rlMainParams.leftMargin = 155;
         rlMc.addView(sbSlider, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(80 , 50);
+        rlMainParams = new RelativeLayout.LayoutParams(110 , 50);
         rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = ((scrHeight * 5) / 6) - 85;
+        rlMainParams.leftMargin = ((scrHeight * 5) / 6) - 100;
         rlMc.addView(tvTime, rlMainParams);
 
         rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
@@ -634,7 +646,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 						timeUpdaterThread = new Thread(timeUpdater);
 						timeUpdaterThread.start();
 					}
-					if(slideTempo != null){
+					if(slideTempo != null & slideTempo.size() > 0){
 						vidViewCurrPos = slideTempo.get(0);
 					}
 					else{
@@ -642,6 +654,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 					}
 			        slideChangerThread = new Thread(slideChanger);
 			        slideChangerThread.start();
+//					closestSetterThread = new Thread(closestSlideUpdater);
+//					closestSetterThread.start();
 				}
 				if(sliderThread == null){
 					sliderThread = new Thread(sliderUpdater);
@@ -788,7 +802,26 @@ public class LODEActivity extends Activity implements OnClickListener,
 			isStarted = true;
 			fullScreen = false;
 			vidView.start();
-			new Thread(closestSlideUpdater).start();
+
+			
+			
+			
+			
+			
+			
+			
+			
+			//new Thread(closestSlideUpdater).start();
+
+			
+			
+			
+			
+			
+			
+			
+			
+			
 			sliderThread = new Thread(sliderUpdater);
 			sliderThread.start();
 		}
@@ -861,6 +894,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 		//Log.e("I'm at: ", String.valueOf(vidViewCurrPos));
 //		if(timeAndSlide.containsKey(vidView.getCurrentPosition() / 1000)){
 		vidViewCurrPos = progress / 1000;
+
+		
+		
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		if(timeAndSlide.containsKey(vidViewCurrPos)){
 			if(isFromUser){
 //				Log.d("OnProgressChanged", "contains key");
@@ -874,6 +920,11 @@ public class LODEActivity extends Activity implements OnClickListener,
 	        slideChangerThread = new Thread(slideChanger);
 	        slideChangerThread.start();
 		}
+
+		
+		
+		
+		
 		else{
 			if(isFromUser){
 //				Log.d("OnProgressChanged", "does not contain key");
@@ -964,6 +1015,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		Bitmap bitmap = null;
 		Drawable drSlide = null;
 	    try {
+			//Log.e("URL", slideUrl);
 		    URL thisUrl = new URL(slideUrl);
 		    HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
 		    conn.connect();
@@ -991,8 +1043,11 @@ public class LODEActivity extends Activity implements OnClickListener,
 				slideTempo.add(singleItem.getTempo());
 				slideTitles.add(singleItem.getTitolo());
 				timeAndSlide.put(singleItem.getTempo(), lectureDataUrl + "/" + singleItem.getImmagine());
-				//Log.e(String.valueOf(singleItem.getTempo()), singleItem.getImmagine());
+				//Log.e("TIME", String.valueOf(singleItem.getTempo()));//, singleItem.getImmagine());
 			}
+			//Log.e("timeAndSlide", timeAndSlide.toString());
+			//Log.e("SYNC", "I HAVE NOTIFIED");
+			slidesReady = true;
 		}
 		
 	}
@@ -1071,6 +1126,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		return false;
 	}
 	public void growSlide(){
+		isMediumSize = true;
 		if(sdTimeline.isOpened()){
 			sdTimeline.animateClose();
 		}
@@ -1112,6 +1168,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	public void shrinkSlide(){
 		ivSlides.setOnTouchListener(null);
+		isMediumSize = false;
 		if(sdTimeline.isOpened()){
 			sdTimeline.animateClose();
 		}
@@ -1390,23 +1447,21 @@ public class LODEActivity extends Activity implements OnClickListener,
 		rlMainParams.leftMargin = 0;
 		rlMain.removeView(ivSlides);
 		rlSlide.addView(ivSlides, rlMainParams);
-		ivSlides.setOnTouchListener(null);
-		ivSlides.requestLayout();
-		ivSlides.invalidate();
-		rlBottomBar.requestLayout();
-		rlBottomBar.invalidate();
+		rlSlide.bringToFront();
+		rlSlide.requestLayout();
+		rlSlide.invalidate();
+		flTimeline.bringToFront();
 		slideInMain = false;
 		slideIsLarge = false;
-
-		start = new PointF();
-		mid = new PointF();
-		currMatrix = new Matrix(); 
-		prevMatrix = new Matrix(); 
+		if(isMediumSize){
+			onLongClick(ivSlides);
+		}
 	}
 	private String convertTime(long seconds){
-		Log.w("SECONDS", String.valueOf(seconds));
+//		Log.w("SECONDS", String.valueOf(seconds));
 		long minutes = (seconds / 60) % 60;
 		long hours = seconds / 3600;
+		seconds = seconds % 60;
 		String time = "";
 		if(hours < 10){
 			time = "0" + hours;
@@ -1419,6 +1474,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		else{
 			time += ":" + String.valueOf(minutes);
+		}
+		
+		if(seconds < 10){
+			time += ":0" + String.valueOf(seconds); 
+		}
+		else{
+			time += ":" + String.valueOf(seconds);
 		}
 		return time;
 	}
