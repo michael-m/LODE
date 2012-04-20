@@ -10,20 +10,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class LODEclActivity extends Activity implements OnItemClickListener{
+	private LodeSaxDataParser lecturesParser = null;
 	private ListView lvCourses = null;
 	private ListView lvLectures = null;
 	public static ListView lvLectureInfo = null;
@@ -55,12 +61,63 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	private ImageButton btnDownload = null;
 	private final String baseUrl = "http://latemar.science.unitn.it/itunes/feeds/";
 	public static Context CL_CONTEXT;
-
+	private AlertDialog alertNetwork = null, alertExit = null, alertWrongData = null;
+	private boolean comingFromSettings = false;
+	private ProgressBar pbCL = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
         setContentView(R.layout.courses_lectures);
-        CL_CONTEXT = this;
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage("Please make sure you have an active data connection.")
+		       .setCancelable(false)
+		       .setTitle("No Internet Access")
+		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		                LODEclActivity.this.finish();
+		           }
+		       })
+		       .setNegativeButton("Settings", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   startActivity(new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS));
+		           }
+		       });
+		alertNetwork = builder.create();
+		alertNetwork.setOwnerActivity(this);
+		
+		builder = new AlertDialog.Builder(this);
+		builder.setMessage("Do you want to leave LODE4Android?")
+		       .setCancelable(false)
+		       .setTitle("Exit LODE4Android:")
+		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		                LODEclActivity.this.finish();
+		           }
+		       })
+		       .setNegativeButton("Stay", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   dialog.dismiss();
+		           }
+		       });
+		alertExit = builder.create();
+		alertExit.setOwnerActivity(this);
+
+		builder = new AlertDialog.Builder(this);
+		builder.setMessage("The course or lecture data is incorrect.")
+		       .setCancelable(true)
+		       .setTitle("LODE4Android: Error")
+		       .setNegativeButton("Okay", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   dialog.dismiss();
+		           }
+		       });
+		alertWrongData = builder.create();
+		alertWrongData.setOwnerActivity(this);
+
+		pbCL = (ProgressBar) findViewById(R.id.pbCL);
+		pbCL.setVisibility(View.GONE);
+		
+		CL_CONTEXT = this;
         handler = new Handler();
         lvCourses = new ListView(this);
         lvCourses.setId(LV_COURSES);
@@ -82,30 +139,58 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
         coursesPopulator = new Runnable() {
 			@Override
 			public void run() {
-				coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
-		        cs = coursesParser.parseCourses();
-	            csIterator = cs.iterator();
-	            handler.post(new Runnable(){
-					@Override
-					public void run() {
-						String title;
-			            tvCourse = new TextView(coursesContext);
-			        	tvCourse.setText("\nAvailable Courses");
-			        	courses.add(tvCourse);
-//			        	Log.e("Title: ", "Available Courses");
-				        while(csIterator.hasNext()){
-				        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
-				        	title = title.trim();
+				try{
+					coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
+				}catch(RuntimeException e){
+		            handler.post(new Runnable(){
+						@Override
+						public void run() {
+							comingFromSettings = true;
+							alertNetwork.show();
+						}
+					});
+				}
+				try{
+			        cs = coursesParser.parseCourses();
+		            csIterator = cs.iterator();
+		            handler.post(new Runnable(){
+						@Override
+						public void run() {
+							pbCL.bringToFront();
+							String title;
 				            tvCourse = new TextView(coursesContext);
-				        	tvCourse.setText(title);
+				        	tvCourse.setText("\nAvailable Courses");
 				        	courses.add(tvCourse);
-				        }
-				        lvCourses.invalidateViews();
-					}
-				});
+//				        	Log.e("Title: ", "Available Courses");
+					        while(csIterator.hasNext()){
+					        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
+					        	title = title.trim();
+					            tvCourse = new TextView(coursesContext);
+					        	tvCourse.setText(title);
+					        	courses.add(tvCourse);
+					        }
+							pbCL.setVisibility(View.GONE);
+					        lvCourses.invalidateViews();
+						}
+					});
+				}catch(RuntimeException e1){
+		            handler.post(new Runnable(){
+						@Override
+						public void run() {
+							comingFromSettings = true;
+							alertWrongData.show();
+						}
+					});
+				}
 			}
 		};
+//		if(isConnected()){
+		pbCL.setVisibility(View.VISIBLE);
 		new Thread(coursesPopulator).start();
+//		}
+//		else{
+//			alert.show();
+//		}
         lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses){
 			@Override
 			public boolean isEnabled(int position) {
@@ -128,10 +213,11 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 				return false;
 			}
 		});
-        //lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
-        lvCourses.setSelector(R.layout.courses_corners_clicked);
+        //lvCourses.setSelector(R.layout.courses_corners_clicked);
+        lvCourses.setSelector(R.drawable.list_item);
         lvCourses.setDividerHeight(2);
         lvCourses.setOnItemClickListener(this);
         
@@ -162,16 +248,17 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		parent.setSelection(position);
+		//parent.setSelection(position);
 //		Log.e("On item click", "being called");
 		final Integer POSITION = position;
 		if(parent.getId() == LV_COURSES){
-			lvLectures.setEnabled(false);
+		     lvLectures.setEnabled(false);
 			if(lvLectureInfo.getVisibility() == View.VISIBLE){
 				lvLectureInfo.setVisibility(View.INVISIBLE);
 			}
 			currPos = position;
 			tvItem = (TextView) parent.getItemAtPosition(position);
+			
 			Iterator<Courses> selectedIterator = cs.iterator();
 			String title;
 			while(selectedIterator.hasNext()){
@@ -182,41 +269,72 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 					lecturesPopulator = new Runnable() {
 						@Override
 						public void run() {
-							if(cl.get(POSITION) == null){
-								String url = baseUrl + selectedCourse.getFolderc() + "/LECTURES.XML";
-								LodeSaxDataParser lecturesParser = new LodeSaxDataParser(url);
-								ls = lecturesParser.parseLectures();
-								cl.put(POSITION, ls);
-//					        	Log.e("Retrieving from: ", "online");
-							}
-							lsIterator = cl.get(POSITION).iterator();
-							handler.post(new Runnable() {
-								@Override
-								public void run() {
-									lectures.removeAll(lectures);
-						            tvItem = new TextView(coursesContext);
-						            String courseDetails = "Professor in charge: " + selectedCourse.getDocentec() + "\n";
-						            courseDetails+= "Academic Year: " + selectedCourse.getYear();
-						        	tvItem.setText(courseDetails);
-						        	lectures.add(tvItem);
-									
-							        while(lsIterator.hasNext()){
-							        	String lTitle = lsIterator.next().getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
-							        	lTitle = lTitle.trim();
-							            tvItem = new TextView(coursesContext);
-							        	tvItem.setText(lTitle);
-							        	lectures.add(tvItem);
-							        }
-									for(int pos = 0; pos < lvLectures.getCount(); pos++){
-										lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
-									}
-									lvLectures.setEnabled(true);
-							        lvLectures.invalidateViews();
+							try{
+								if(cl.get(POSITION) == null){
+									String url = baseUrl + selectedCourse.getFolderc() + "/LECTURES.XML";
+									lecturesParser = new LodeSaxDataParser(url);
 								}
-							});
+							}catch(RuntimeException e){
+					            handler.post(new Runnable(){
+									@Override
+									public void run() {
+										comingFromSettings = true;
+										alertNetwork.show();
+									}
+								});
+							}
+							try{
+								if(cl.get(POSITION) == null){
+									ls = lecturesParser.parseLectures();
+									cl.put(POSITION, ls);
+//						        	Log.e("Retrieving from: ", "online");
+								}
+								lsIterator = cl.get(POSITION).iterator();
+								handler.post(new Runnable() {
+									@Override
+									public void run() {
+										pbCL.setVisibility(View.VISIBLE);
+										pbCL.bringToFront();
+										lectures.removeAll(lectures);
+							            tvItem = new TextView(coursesContext);
+							            String courseDetails = "Professor in charge: " + selectedCourse.getDocentec() + "\n";
+							            courseDetails+= "Academic Year: " + selectedCourse.getYear();
+							        	tvItem.setText(courseDetails);
+							        	lectures.add(tvItem);
+										
+								        while(lsIterator.hasNext()){
+								        	String lTitle = lsIterator.next().getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
+								        	lTitle = lTitle.trim();
+								            tvItem = new TextView(coursesContext);
+								        	tvItem.setText(lTitle);
+								        	lectures.add(tvItem);
+								        }
+										for(int pos = 0; pos < lvLectures.getCount(); pos++){
+											lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
+										}
+										pbCL.setVisibility(View.GONE);
+										lvLectures.setEnabled(true);
+								        lvLectures.invalidateViews();
+									}
+								});
+							}catch(RuntimeException e1){
+					            handler.post(new Runnable(){
+									@Override
+									public void run() {
+										comingFromSettings = true;
+										alertWrongData.show();
+									}
+								});
+							}
 						}
 					};
+//					if(isConnected()){
+					pbCL.setVisibility(View.VISIBLE);
 					new Thread(lecturesPopulator).start();
+//					}
+//					else{
+//						alert.show();
+//					}
 					break;
 				}
 			}
@@ -242,7 +360,38 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 			lvLectureInfo.setVisibility(View.INVISIBLE);
 			lvLectures.setEnabled(true);
 		}
-		else
-			super.onBackPressed();
+		else{
+			alertExit.show();
+		}
+	}
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if(comingFromSettings){
+	        courses = new ArrayList<TextView>();
+			comingFromSettings = false;
+			new Thread(coursesPopulator).start();
+		}
+	}
+	private boolean isConnected() {
+//	    boolean isWifi = false;
+//	    boolean isMobile = false;
+
+	    ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+//	    NetworkInfo[] netInfo = cm.getAllNetworkInfo();
+	    return cm.getActiveNetworkInfo().isAvailable();
+//	    for (NetworkInfo ni : netInfo) {
+//	        if (("WIFI").equals(ni.getTypeName())){
+//	            if (ni.isConnected()){
+//	                isWifi = true;
+//	            }
+//	        }
+//	        if (("MOBILE").equals(ni.getTypeName())){
+//	            if (ni.isConnected()){
+//	                isMobile = true;
+//	            }
+//	        }
+//	    }
+//	    return isWifi || isMobile;
 	}
 }

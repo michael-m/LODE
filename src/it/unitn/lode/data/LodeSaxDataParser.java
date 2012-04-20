@@ -44,13 +44,13 @@ public class LodeSaxDataParser extends BaseDataParser {
             Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
         } catch (Exception e) {
 //            throw new RuntimeException(e);
-        	root = new RootElement("lezione");
-            try {
-                Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
-            }
-            catch (Exception e1) {
-              throw new RuntimeException(e1);
-            }
+//        	root = new RootElement("lezione");
+//            try {
+//                Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+//            }
+//            catch (Exception e1) {
+              throw new RuntimeException(e);
+//            }
         }
         return timedSlides;
 	}

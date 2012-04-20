@@ -17,7 +17,9 @@ import android.util.FloatMath;
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -30,7 +32,10 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
+import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnPreparedListener;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -59,7 +64,7 @@ import android.widget.TextView;
 
 public class LODEActivity extends Activity implements OnClickListener,
 	OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
-	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener{
+	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener, OnErrorListener{
     /** Called when the activity is first created. */
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
@@ -120,13 +125,52 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private float prevDist = 1f;
 	private static long duration = 0;
 	private boolean slidesReady = false, isMediumSize = false;
+	private AlertDialog alertNetwork = null, alertWrongData = null;
 
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
-        Bundle watchBundle = getIntent().getExtras();
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage("Please make sure you have an active data connection.")
+		       .setCancelable(false)
+		       .setTitle("No Internet Access")
+		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		                LODEActivity.this.finish();
+		           }
+		       })
+		       .setNegativeButton("Settings", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   startActivity(new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS));
+		           }
+		       });
+		alertNetwork = builder.create();
+		alertNetwork.setOwnerActivity(this);
+
+		builder = new AlertDialog.Builder(this);
+		builder.setMessage("Lecture data is incorrect.")
+		       .setCancelable(false)
+		       .setTitle("LODE4Android: Error")
+		       .setPositiveButton("Ignore", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   pbSlide.setVisibility(View.GONE);
+		        	   ivSlides.setScaleType(ScaleType.CENTER);
+		        	   ivSlides.setImageResource(android.R.drawable.stat_notify_error);
+		        	   sdTimeline.setVisibility(View.GONE);
+		               dialog.dismiss();
+		           }
+		       })
+		       .setNegativeButton("Go back", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   LODEActivity.this.finish();
+		           }
+		       });
+		alertWrongData = builder.create();
+		alertWrongData.setOwnerActivity(this);
+
+		Bundle watchBundle = getIntent().getExtras();
         videoUrl = watchBundle.getString("videoUrl");
         lectureDataUrl = watchBundle.getString("lectureDataUrl");
         watchBundle = null;
@@ -340,36 +384,59 @@ public class LODEActivity extends Activity implements OnClickListener,
         listPopulator = new Runnable() {
 			@Override
 			public void run() {
-		        tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML");
-		        ts = tsParser.parseSlides();
-		        tsNext = ts;
-		        tsSlideIterator = tsNext.iterator();
-		        tsIterator = ts.iterator();
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-			            tvSlidePos = new TextView(LodeActivityContext);
-			        	tvSlidePos.setText("Start");
-			        	slidePos.add(tvSlidePos);
-						String title;
-				        while(tsIterator.hasNext()){
-				        	title = tsIterator.next().getTitolo().trim().replaceAll(" +", " ").replace("\n", "");
-				        	title = title.trim();
+				try{
+			        tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML");
+				}catch(RuntimeException e){
+		            handler.post(new Runnable(){
+						@Override
+						public void run() {
+							alertNetwork.show();
+						}
+					});
+				}
+				try{
+			        ts = tsParser.parseSlides();
+			        tsNext = ts;
+			        tsSlideIterator = tsNext.iterator();
+			        tsIterator = ts.iterator();
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
 				            tvSlidePos = new TextView(LodeActivityContext);
-				        	tvSlidePos.setText(title);
+				        	tvSlidePos.setText("Start");
 				        	slidePos.add(tvSlidePos);
-//				        	Log.e("Title: ", title);
-				        }
-			            tvSlidePos = new TextView(LodeActivityContext);
-			        	tvSlidePos.setText("End");
-			        	slidePos.add(tvSlidePos);
-			        	lvTimeline.invalidateViews();
-					}
-				});
+							String title;
+					        while(tsIterator.hasNext()){
+					        	title = tsIterator.next().getTitolo().trim().replaceAll(" +", " ").replace("\n", "");
+					        	title = title.trim();
+					            tvSlidePos = new TextView(LodeActivityContext);
+					        	tvSlidePos.setText(title);
+					        	slidePos.add(tvSlidePos);
+//					        	Log.e("Title: ", title);
+					        }
+				            tvSlidePos = new TextView(LodeActivityContext);
+				        	tvSlidePos.setText("End");
+				        	slidePos.add(tvSlidePos);
+				        	lvTimeline.invalidateViews();
+						}
+					});
+				}catch(RuntimeException e){
+		            handler.post(new Runnable(){
+						@Override
+						public void run() {
+							alertWrongData.show();
+						}
+					});
+				}
 			}
 		};
-		new Thread(listPopulator).start();
-		
+
+		if(isConnected()){
+			new Thread(listPopulator).start();
+		}
+		else{
+			alertNetwork.show();
+		}
 		slideChanger = new Runnable() {
 			Iterator<String> titleIterator = slideTitles.iterator();
 			@Override
@@ -427,6 +494,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         //vidView.setOnTouchListener(this);
         vidView.setOnCompletionListener(this);
         vidView.setOnPreparedListener(this);
+        vidView.setOnErrorListener(this);
         //vidView.setLongClickable(true);
         
         vidViewLayer = new ImageView(this);
@@ -738,6 +806,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				vidView.invalidate();
 				btnFullScreen.bringToFront();
 				vidViewLayer.bringToFront();
+				pbVideo.bringToFront();
 				rlMc.bringToFront();
 				rlMc.requestLayout();
 				rlMc.invalidate();
@@ -785,9 +854,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 	@Override
 	protected void onResume() {
 		super.onResume();
+		if(!isConnected()){
+			alertNetwork.show();
+		}
 		keepCounting = true;
-		if(timeUpdaterThread == null){
+		if(timeUpdaterThread != null){
 			Log.e("onResume", "Starting Time Updater");
+			dead = timeUpdaterThread;
+			dead.interrupt();
+			timeUpdaterThread = null;
+			timeUpdaterThread = new Thread(timeUpdater);
+			timeUpdaterThread.start();
+		}
+		else{
 			timeUpdaterThread = new Thread(timeUpdater);
 			timeUpdaterThread.start();
 		}
@@ -906,42 +985,43 @@ public class LODEActivity extends Activity implements OnClickListener,
 		
 		
 		
-		
-		if(timeAndSlide.containsKey(vidViewCurrPos)){
-			if(isFromUser){
-//				Log.d("OnProgressChanged", "contains key");
-			}
-			if(slideChangerThread != null){
-//				Log.e("SLIDE CHANGER THREAD", "I'M STILL ALIVE");
-				dead = slideChangerThread;
-				slideChangerThread = null;
-				dead.interrupt();
-			}
-	        slideChangerThread = new Thread(slideChanger);
-	        slideChangerThread.start();
-		}
-
-		
-		
-		
-		
-		else{
-			if(isFromUser){
-//				Log.d("OnProgressChanged", "does not contain key");
-			}
-			closestTempo = getClosestTempo(vidViewCurrPos);
-//			Log.d("closestTempo", String.valueOf(closestTempo));
-			if(currentTempo != closestTempo){
-				currentTempo = closestTempo;
-				if(closestSetterThread != null){
-//					Log.e("KILLING", "CLOSEST SETTER THREAD");
-					dead = closestSetterThread;
-					closestSetterThread = null;
+		if(timeAndSlide != null){
+			if(timeAndSlide.containsKey(vidViewCurrPos)){
+				if(isFromUser){
+//					Log.d("OnProgressChanged", "contains key");
+				}
+				if(slideChangerThread != null){
+//					Log.e("SLIDE CHANGER THREAD", "I'M STILL ALIVE");
+					dead = slideChangerThread;
+					slideChangerThread = null;
 					dead.interrupt();
 				}
-//				Log.e("CALLING", "CLOSEST SETTER THREAD");
-				closestSetterThread = new Thread(closestSlideUpdater);
-				closestSetterThread.start();
+		        slideChangerThread = new Thread(slideChanger);
+		        slideChangerThread.start();
+			}
+
+			
+			
+			
+			
+			else{
+				if(isFromUser){
+//					Log.d("OnProgressChanged", "does not contain key");
+				}
+				closestTempo = getClosestTempo(vidViewCurrPos);
+//				Log.d("closestTempo", String.valueOf(closestTempo));
+				if(currentTempo != closestTempo){
+					currentTempo = closestTempo;
+					if(closestSetterThread != null){
+//						Log.e("KILLING", "CLOSEST SETTER THREAD");
+						dead = closestSetterThread;
+						closestSetterThread = null;
+						dead.interrupt();
+					}
+//					Log.e("CALLING", "CLOSEST SETTER THREAD");
+					closestSetterThread = new Thread(closestSlideUpdater);
+					closestSetterThread.start();
+				}
 			}
 		}
 	}
@@ -1024,6 +1104,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		    drSlide = new BitmapDrawable(bitmap);
 		} catch (IOException e) {
 			e.printStackTrace();
+			alertNetwork.show();
 		}
 	    return drSlide;
 	}
@@ -1483,5 +1564,35 @@ public class LODEActivity extends Activity implements OnClickListener,
 			time += ":" + String.valueOf(seconds);
 		}
 		return time;
+	}
+	@Override
+	public boolean onError(MediaPlayer mp, int what, int extra) {
+//		if(what == MediaPlayer.MEDIA_ERROR_SERVER_DIED){
+			//NEED TO RELEASE MEDIA PLAYER AND INSTANTIATE A NEW ONE.
+			alertNetwork.show();
+			return true;
+//		}
+//		return false;
+	}
+	private boolean isConnected() {
+//	    boolean isWifi = false;
+//	    boolean isMobile = false;
+
+	    ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+//	    NetworkInfo[] netInfo = cm.getAllNetworkInfo();
+	    return cm.getActiveNetworkInfo().isAvailable();
+//	    for (NetworkInfo ni : netInfo) {
+//	        if (("WIFI").equals(ni.getTypeName())){
+//	            if (ni.isConnected()){
+//	                isWifi = true;
+//	            }
+//	        }
+//	        if (("MOBILE").equals(ni.getTypeName())){
+//	            if (ni.isConnected()){
+//	                isMobile = true;
+//	            }
+//	        }
+//	    }
+//	    return isWifi || isMobile;
 	}
 }

@@ -23,7 +23,6 @@
         <activity
             android:name=".LODEActivity" android:screenOrientation="landscape">
         </activity>
-
         <activity
             android:name=".LODEclActivity" android:screenOrientation="landscape">
         </activity>

@@ -14,6 +14,7 @@ import android.widget.TextView;
 public class CoursesAdapter extends ArrayAdapter<TextView>{
 	private ArrayList<TextView> courses;
 	private Typeface tfApplegaramound = null;
+	public ArrayList<Integer> selectedIds = new ArrayList<Integer>();
 
 	public CoursesAdapter(Context context, int textViewResourceId,
             ArrayList<TextView> courses) {

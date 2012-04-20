@@ -4,6 +4,12 @@
 	    android:id="@+id/rlCL"
     	android:layout_width="match_parent"
     	android:layout_height="match_parent">
+    	<ProgressBar 
+    	    android:id="@+id/pbCL"
+    	    android:indeterminateOnly="true"
+    	    android:layout_centerInParent="true"
+    	    android:layout_width="30dip"
+    	    android:layout_height="30dip"/>
 		<ListView
 		   	android:id="@+id/lvLectureInfo"
 		   	android:layout_width="wrap_content"
