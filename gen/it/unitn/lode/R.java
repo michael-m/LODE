@@ -12,38 +12,28 @@ public final class R {
     }
     public static final class drawable {
         public static final int a9p_09_11_00015=0x7f020000;
-        public static final int a9p_09_11_00063=0x7f020001;
-        public static final int a9p_09_11_00339=0x7f020002;
-        public static final int a9p_09_11_00943=0x7f020003;
-        public static final int a9p_09_11_00944=0x7f020004;
-        public static final int a9p_09_11_00945=0x7f020005;
-        public static final int arrow_down_float=0x7f020006;
-        public static final int arrow_up_float=0x7f020007;
-        public static final int fullscreen=0x7f020008;
-        public static final int ic_launcher=0x7f020009;
-        public static final int ic_media_ff=0x7f02000a;
-        public static final int ic_media_next=0x7f02000b;
-        public static final int ic_media_pause=0x7f02000c;
-        public static final int ic_media_play=0x7f02000d;
-        public static final int ic_media_previous=0x7f02000e;
-        public static final int ic_media_rew=0x7f02000f;
-        public static final int ic_menu_search=0x7f020010;
-        public static final int ic_tab_artists_grey=0x7f020011;
-        public static final int ic_tab_artists_white=0x7f020012;
-        public static final int list_item=0x7f020013;
-        public static final int slide=0x7f020014;
-        public static final int tab_normal=0x7f020015;
-        public static final int tabs=0x7f020016;
-        public static final int tray_handle_normal_h=0x7f020017;
-        public static final int tray_handle_normal_v=0x7f020018;
+        public static final int fullscreen=0x7f020001;
+        public static final int ic_launcher=0x7f020002;
+        public static final int ic_menu_search=0x7f020003;
+        public static final int list_item=0x7f020004;
+        public static final int lock_locked=0x7f020005;
+        public static final int lock_unlocked=0x7f020006;
+        public static final int slide=0x7f020007;
+        public static final int tab_normal=0x7f020008;
+        public static final int tabs=0x7f020009;
+        public static final int tray_handle_normal_h=0x7f02000a;
+        public static final int tray_handle_normal_v=0x7f02000b;
     }
     public static final class id {
         public static final int btnDownload=0x7f06000b;
+        public static final int btnF=0x7f060018;
+        public static final int btnPlay=0x7f060016;
+        public static final int btnR=0x7f060017;
         public static final int btnWatch=0x7f06000a;
         public static final int flTimeline=0x7f06000d;
         public static final int handle_v=0x7f06000f;
         public static final int llFsVideo=0x7f060006;
-        public static final int llTabs=0x7f060017;
+        public static final int llTabs=0x7f06001d;
         public static final int lvLectureInfo=0x7f060003;
         public static final int lvTimeline=0x7f060011;
         public static final int pbCL=0x7f060002;
@@ -51,16 +41,19 @@ public final class R {
         public static final int rlBottomBar=0x7f060014;
         public static final int rlCL=0x7f060001;
         public static final int rlLectureInfo=0x7f060008;
-        public static final int rlLectures=0x7f060015;
+        public static final int rlLectures=0x7f06001b;
         public static final int rlMain=0x7f06000c;
         public static final int rlMc=0x7f060012;
         public static final int rlSlide=0x7f060013;
         public static final int rlTimeline=0x7f060010;
+        public static final int sbSlider=0x7f060019;
         public static final int sdTimeline=0x7f06000e;
         public static final int slideTemp=0x7f060004;
         public static final int tvCourses=0x7f060000;
         public static final int tvLectureInfo=0x7f060009;
-        public static final int tvSlidePos=0x7f060016;
+        public static final int tvSlidePos=0x7f06001c;
+        public static final int tvTime=0x7f06001a;
+        public static final int vidView=0x7f060015;
         public static final int vvFsVideo=0x7f060005;
     }
     public static final class layout {
@@ -80,14 +73,15 @@ public final class R {
         public static final int lecture_popup=0x7f03000d;
         public static final int lectures=0x7f03000e;
         public static final int main=0x7f03000f;
-        public static final int no_stroke=0x7f030010;
-        public static final int progress_slider=0x7f030011;
-        public static final int progress_thumb=0x7f030012;
-        public static final int settings=0x7f030013;
-        public static final int slide_pos=0x7f030014;
-        public static final int tab_shape=0x7f030015;
-        public static final int tabs_main=0x7f030016;
-        public static final int timeline=0x7f030017;
+        public static final int main_dp=0x7f030010;
+        public static final int no_stroke=0x7f030011;
+        public static final int progress_slider=0x7f030012;
+        public static final int progress_thumb=0x7f030013;
+        public static final int settings=0x7f030014;
+        public static final int slide_pos=0x7f030015;
+        public static final int tab_shape=0x7f030016;
+        public static final int tabs_main=0x7f030017;
+        public static final int timeline=0x7f030018;
     }
     public static final class string {
         public static final int app_name=0x7f040001;

@@ -19,6 +19,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -87,7 +88,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 		
 		builder = new AlertDialog.Builder(this);
 		builder.setMessage("Do you want to leave LODE4Android?")
-		       .setCancelable(false)
+		       .setCancelable(true)
 		       .setTitle("Exit LODE4Android:")
 		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
@@ -141,10 +142,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 			public void run() {
 				try{
 					coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
+					Log.e("CourseDataParser", "No Connection Exception");
 				}catch(RuntimeException e){
 		            handler.post(new Runnable(){
 						@Override
 						public void run() {
+							Log.e("CourseDataParser", "Connection Exception");
 							comingFromSettings = true;
 							alertNetwork.show();
 						}
@@ -178,7 +181,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 						@Override
 						public void run() {
 							comingFromSettings = true;
-							alertWrongData.show();
+							if(isConnected()){
+								alertWrongData.show();
+							}
+							else{
+								alertNetwork.show();
+							}
 						}
 					});
 				}
@@ -309,9 +317,9 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								        	tvItem.setText(lTitle);
 								        	lectures.add(tvItem);
 								        }
-										for(int pos = 0; pos < lvLectures.getCount(); pos++){
-											lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
-										}
+//										for(int pos = 0; pos < lvLectures.getCount(); pos++){
+//											lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
+//										}
 										pbCL.setVisibility(View.GONE);
 										lvLectures.setEnabled(true);
 								        lvLectures.invalidateViews();
@@ -322,7 +330,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 									@Override
 									public void run() {
 										comingFromSettings = true;
-										alertWrongData.show();
+										if(isConnected()){
+											alertWrongData.show();
+										}
+										else{
+											alertNetwork.show();
+										}
 									}
 								});
 							}
@@ -379,7 +392,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 
 	    ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 //	    NetworkInfo[] netInfo = cm.getAllNetworkInfo();
-	    return cm.getActiveNetworkInfo().isAvailable();
+	    return cm.getActiveNetworkInfo() == null ? false : cm.getActiveNetworkInfo().isAvailable();
 //	    for (NetworkInfo ni : netInfo) {
 //	        if (("WIFI").equals(ni.getTypeName())){
 //	            if (ni.isConnected()){
@@ -393,5 +406,11 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 //	        }
 //	    }
 //	    return isWifi || isMobile;
+	}
+	public int convertToDp(int input){
+		// Get the screen's density scale
+		final float scale = getResources().getDisplayMetrics().density;
+		// Convert the dps to pixels, based on density scale
+		return (int) (input * scale + 0.5f);
 	}
 }
