@@ -88,6 +88,7 @@ public final class R {
         public static final int hello=0x7f040000;
     }
     public static final class style {
+        public static final int Theme_Transparent=0x7f050001;
         public static final int list_item=0x7f050000;
     }
 }

@@ -17,11 +17,11 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
 	private Typeface tfApplegaramound = null;
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
-	public static AssetManager ASSETS = null; 
+	public static AssetManager ASSETS = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.tabs_main);
+		setContentView(R.layout.tabs_main);
 
         ASSETS = getAssets();
         devDisplay = getWindowManager().getDefaultDisplay();
@@ -75,7 +75,6 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         tabParams.gravity = Gravity.CENTER;
         llTabs.setLayoutParams(tabParams);
 	}
-
 	@Override
 	public void onTabChanged(String tabId) {
 	}

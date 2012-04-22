@@ -72,7 +72,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
-		       .setTitle("No Internet Access")
+		       .setTitle("Lode4Android: No Internet Access")
 		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
 		                LODEclActivity.this.finish();
@@ -89,7 +89,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 		builder = new AlertDialog.Builder(this);
 		builder.setMessage("Do you want to leave LODE4Android?")
 		       .setCancelable(true)
-		       .setTitle("Exit LODE4Android:")
+		       .setTitle("LODE4Android: Exit")
 		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
 		                LODEclActivity.this.finish();
@@ -142,12 +142,10 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 			public void run() {
 				try{
 					coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
-					Log.e("CourseDataParser", "No Connection Exception");
 				}catch(RuntimeException e){
 		            handler.post(new Runnable(){
 						@Override
 						public void run() {
-							Log.e("CourseDataParser", "Connection Exception");
 							comingFromSettings = true;
 							alertNetwork.show();
 						}

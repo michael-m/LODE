@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
+import android.text.BoringLayout.Metrics;
 import android.util.DisplayMetrics;
 import android.util.FloatMath;
 import android.util.Log;
@@ -84,6 +85,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	public static int currPos = 0;
+	private final int D_LOW = DisplayMetrics.DENSITY_LOW, D_MEDIUM = DisplayMetrics.DENSITY_MEDIUM, D_HIGH = DisplayMetrics.DENSITY_HIGH;
 	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false, activityFirstRun = true;
 	public static boolean hasFinished = false;
 	private Handler handler = null;
@@ -125,7 +127,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private float prevDist = 1f;
 	private static long duration = 0;
 	private boolean slidesReady = false, isMediumSize = false;
-	private AlertDialog alertNetwork = null, alertWrongData = null;
+	private AlertDialog alertNetwork = null, alertWrongData = null, alertEndLesson = null;
+	private DisplayMetrics metrics = null;
 
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -135,7 +138,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
-		       .setTitle("No Internet Access")
+		       .setTitle("Lode4Android: No Internet Access")
 		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
 		                LODEActivity.this.finish();
@@ -150,9 +153,43 @@ public class LODEActivity extends Activity implements OnClickListener,
 		alertNetwork.setOwnerActivity(this);
 
 		builder = new AlertDialog.Builder(this);
+		builder.setMessage("Do you want to end this lecture and return to the previous screen?")
+		       .setCancelable(true)
+		       .setTitle("LODE4Android: End Lecture")
+		       .setPositiveButton("End Lecture", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+			   			sbSlider.setProgress(0);
+						if(slideChangerThread != null){
+							dead = slideChangerThread;
+							slideChangerThread = null;
+							dead.interrupt();
+						}			
+						if(slideGetterThread != null){
+							dead = slideGetterThread;
+							slideGetterThread = null;
+							dead.interrupt();
+						}
+						if(slideChangerThread != null){
+							dead = slideChangerThread;
+							slideChangerThread = null;
+							dead.interrupt();
+						}
+		                LODEActivity.this.finish();
+			           }
+		       })
+		       .setNegativeButton("Stay", new DialogInterface.OnClickListener() {
+		           public void onClick(DialogInterface dialog, int id) {
+		        	   dialog.dismiss();
+		        	   LODEActivity.this.onClick(btnPlay);
+		           }
+		       });
+		alertEndLesson = builder.create();
+		alertEndLesson.setOwnerActivity(this);
+
+		builder = new AlertDialog.Builder(this);
 		builder.setMessage("Lecture data is incorrect.")
 		       .setCancelable(false)
-		       .setTitle("LODE4Android: Error")
+		       .setTitle("LODE4Android: Wrong Data")
 		       .setPositiveButton("Ignore", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
 		        	   pbSlide.setVisibility(View.GONE);
@@ -280,16 +317,28 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
         };				
 
-        DisplayMetrics metrics = new DisplayMetrics();
+        metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         
         scrWidth = metrics.widthPixels;
         scrHeight = metrics.heightPixels;
-        Log.e("scrWidth:px", String.valueOf(scrWidth));
-        Log.e("scrHeight:px", String.valueOf(scrHeight));
-        Log.e("scrWidth:dp", String.valueOf(convertToDp(scrWidth)));
-        Log.e("scrHeight:dp", String.valueOf(convertToDp(scrHeight)));
-        Log.e("vidWidth",String.valueOf(convertToDp(480 * 5 / 6)));
+//        Log.e("scrWidth:px", String.valueOf(scrWidth));
+//        Log.e("scrHeight:px", String.valueOf(scrHeight));
+//        Log.e("scrWidth:dp", String.valueOf(dp(scrWidth)));
+//        Log.e("scrHeight:dp", String.valueOf(dp(scrHeight)));
+//        Log.e("vidWidth",String.valueOf(dp(480 * 5 / 6)));
+        if(metrics.densityDpi == D_LOW){
+            Log.e("Density","LOW");
+        }
+        else if(metrics.densityDpi == D_MEDIUM){
+            Log.e("Density","MEDIUM");
+        }
+        else if(metrics.densityDpi == D_HIGH){
+            Log.e("Density","HIGH");
+        }
+        else{
+            Log.e("Density","X-HIGH");
+        }
 
         rlMain = (RelativeLayout) findViewById(R.id.rlMain);
         rlMain.setBackgroundColor(Color.LTGRAY);
@@ -524,12 +573,14 @@ public class LODEActivity extends Activity implements OnClickListener,
         tvTime = new TextView(this);
         tvTime.setBackgroundResource(R.layout.no_stroke);
         tvTime.setTypeface(tfApplegaramound);
-        tvTime.setTextSize(12);
         tvTime.setTextColor(Color.BLACK);
-        tvTime.setPadding(0, 15, 0, 0);
         tvTime.setGravity(Gravity.LEFT);
         tvTime.setText("00:00");
 
+        
+        
+
+        
         
         
 //ADD VIEWS TO LAYOUTS
@@ -539,95 +590,193 @@ public class LODEActivity extends Activity implements OnClickListener,
 //        rlMainParams.leftMargin = 0;
 //        rlMain.addView(tvTitle, rlMainParams);
 //
-        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
-        rlMain.addView(vidView, rlMainParams);
+        if(metrics.densityDpi == D_MEDIUM){
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(vidView, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
-        rlMain.addView(vidViewLayer, rlMainParams);
-        
-        rlMainParams = new RelativeLayout.LayoutParams(25, 25);
-        rlMainParams.topMargin = scrHeight * 3 / 8;
-        rlMainParams.leftMargin = scrHeight * 3 / 8;
-        rlMain.addView(pbVideo, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(vidViewLayer, rlMainParams);
+            
+            rlMainParams = new RelativeLayout.LayoutParams(25, 25);
+            rlMainParams.topMargin = scrHeight * 3 / 8;
+            rlMainParams.leftMargin = scrHeight * 3 / 8;
+            rlMain.addView(pbVideo, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 5;
-        rlMc.addView(btnPlay, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(40), dp(40));
+            rlMc.addView(btnPlay, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 55;
-        rlMc.addView(btnR, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(40), dp(40));
+            rlMainParams.leftMargin = dp(40);
+            rlMc.addView(btnR, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 105;
-        rlMc.addView(btnF, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(40), dp(40));
+            rlMainParams.leftMargin = dp(80);
+            rlMc.addView(btnF, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 220 , 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 155;
-        rlMc.addView(sbSlider, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 260) , dp(40));
+            rlMainParams.leftMargin = dp(40) + dp(80);
+            rlMc.addView(sbSlider, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(110 , 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = ((scrHeight * 5) / 6) - 100;
-        rlMc.addView(tvTime, rlMainParams);
+            tvTime.setTextSize(10);
+            tvTime.setPadding(5, 15, 0, 0);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(120) , dp(50));
+            rlMainParams.leftMargin = dp(120) + dp((scrWidth * 2) / 3 - 260);
+            rlMc.addView(tvTime, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
-        rlMainParams.topMargin = (scrHeight * 15) / 24;
-        rlMainParams.leftMargin = 0;
-        rlMc.setGravity(Gravity.CENTER_VERTICAL);
-        rlMain.removeView(rlMc);
-        rlMain.addView(rlMc, rlMainParams);
-        
-        rlMc.bringToFront();
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - 6, 80);
-        rlMainParams.topMargin = scrHeight - 83;
-        rlMainParams.leftMargin = 3;
-        rlMain.removeView(rlBottomBar);
-        rlMain.addView(rlBottomBar, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp(50));
+            rlMainParams.topMargin = dp((scrWidth * 2 - 75)/ 4);
+            rlMainParams.leftMargin = 0;
+            rlMain.removeView(rlMc);
+            rlMain.addView(rlMc, rlMainParams);
+            
+            rlMc.bringToFront();
+            rlMainParams = new RelativeLayout.LayoutParams(scrWidth, dp(50));
+            rlMainParams.topMargin = scrHeight - dp(50);
+            rlMainParams.leftMargin = 0;
+            rlMain.removeView(rlBottomBar);
+            rlMain.addView(rlBottomBar, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(85, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
-        rlBottomBar.addView(btnZoomOut, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+            rlMainParams.width = LayoutParams.WRAP_CONTENT;
+            rlMainParams.height = LayoutParams.WRAP_CONTENT;
+            rlMainParams.topMargin = dp(5);
+            rlMainParams.leftMargin = 0;
+            rlBottomBar.addView(btnZoomOut, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(85, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 100;
-        rlBottomBar.addView(btnZoomIn, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+            rlMainParams.width = LayoutParams.WRAP_CONTENT;
+            rlMainParams.height = LayoutParams.WRAP_CONTENT;
+            rlMainParams.topMargin = dp(5);
+            rlMainParams.leftMargin = dp(80);
+            rlBottomBar.addView(btnZoomIn, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(40, 40);
-        rlMainParams.topMargin = 3;
-        rlMainParams.leftMargin = 170;
-        rlBottomBar.addView(btnLockInPlace, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(25), dp(25));
+            rlMainParams.topMargin = dp(15);
+            rlMainParams.leftMargin = dp(130);
+            rlBottomBar.addView(btnLockInPlace, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = (scrHeight * 5) / 6;
-        rlMain.removeView(rlSlide);
-        rlMain.addView(rlSlide, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
+            rlMain.removeView(rlSlide);
+            rlMain.addView(rlSlide, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
-        rlSlide.addView(ivSlides, rlMainParams);
-        
-        rlMainParams = new RelativeLayout.LayoutParams(25, 25);
-        rlMainParams.topMargin = scrHeight * 3 / 8 + 15;
-        rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
-        rlMain.addView(pbSlide, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlSlide.addView(ivSlides, rlMainParams);
+            
+            rlMainParams = new RelativeLayout.LayoutParams(25, 25);
+            rlMainParams.topMargin = scrHeight * 3 / 8 + 15;
+            rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
+            rlMain.addView(pbSlide, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
-        rlMain.addView(btnFullScreen, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(btnFullScreen, rlMainParams);
+        }
+        else if(metrics.densityDpi == D_LOW){
+        	LODEActivity.this.finish();
+        }
+        else{
+
+            rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(vidView, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(vidViewLayer, rlMainParams);
+            
+            rlMainParams = new RelativeLayout.LayoutParams(25, 25);
+            rlMainParams.topMargin = scrHeight * 3 / 8;
+            rlMainParams.leftMargin = scrHeight * 3 / 8;
+            rlMain.addView(pbVideo, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 5;
+            rlMc.addView(btnPlay, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 55;
+            rlMc.addView(btnR, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 105;
+            rlMc.addView(btnF, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 220 , 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 155;
+            rlMc.addView(sbSlider, rlMainParams);
+
+            tvTime.setTextSize(12);
+            tvTime.setPadding(0, 15, 0, 0);
+            rlMainParams = new RelativeLayout.LayoutParams(110 , 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = ((scrHeight * 5) / 6) - 100;
+            rlMc.addView(tvTime, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
+            rlMainParams.topMargin = (scrHeight * 15) / 24;
+            rlMainParams.leftMargin = 0;
+            rlMc.setGravity(Gravity.CENTER_VERTICAL);
+            rlMain.removeView(rlMc);
+            rlMain.addView(rlMc, rlMainParams);
+            
+            rlMc.bringToFront();
+            rlMainParams = new RelativeLayout.LayoutParams(scrWidth - 6, 80);
+            rlMainParams.topMargin = scrHeight - 83;
+            rlMainParams.leftMargin = 3;
+            rlMain.removeView(rlBottomBar);
+            rlMain.addView(rlBottomBar, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(85, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlBottomBar.addView(btnZoomOut, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(85, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 100;
+            rlBottomBar.addView(btnZoomIn, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(40, 40);
+            rlMainParams.topMargin = 3;
+            rlMainParams.leftMargin = 170;
+            rlBottomBar.addView(btnLockInPlace, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = (scrHeight * 5) / 6;
+            rlMain.removeView(rlSlide);
+            rlMain.addView(rlSlide, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlSlide.addView(ivSlides, rlMainParams);
+            
+            rlMainParams = new RelativeLayout.LayoutParams(25, 25);
+            rlMainParams.topMargin = scrHeight * 3 / 8 + 15;
+            rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
+            rlMain.addView(pbSlide, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
+            rlMain.addView(btnFullScreen, rlMainParams);
+        }
 }
 	@Override
 	public void onClick(View view) {
@@ -952,23 +1101,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 			sdTimeline.animateClose();
 		}
 		else{
-			sbSlider.setProgress(0);
-			if(slideChangerThread != null){
-				dead = slideChangerThread;
-				slideChangerThread = null;
-				dead.interrupt();
-			}			
-			if(slideGetterThread != null){
-				dead = slideGetterThread;
-				slideGetterThread = null;
-				dead.interrupt();
-			}
-			if(slideChangerThread != null){
-				dead = slideChangerThread;
-				slideChangerThread = null;
-				dead.interrupt();
-			}
-			this.finish();
+			LODEActivity.this.onClick(btnPlay);
+			alertEndLesson.show();
 		}
 	}
 	Drawable getSlide(String slideUrl){
@@ -1101,22 +1235,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 		rlSlide.removeView(ivSlides);
 		rlSlide.addView(ivSlides, rlMainParams);
 
-//        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
-//        rlMainParams.width = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.height = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.topMargin = 0;
-//        rlMainParams.leftMargin = 20;
-//        rlBottomBar.removeView(btnZoomIn);
-//        rlBottomBar.addView(btnZoomIn, rlMainParams);
-
-//        rlMainParams = new RelativeLayout.LayoutParams(60, 50);
-////        rlMainParams.width = LayoutParams.WRAP_CONTENT;
-////        rlMainParams.height = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.topMargin = 0;
-//        rlMainParams.leftMargin = 0;
-//        rlBottomBar.removeView(btnLockInPlace);
-//        rlBottomBar.addView(btnLockInPlace, rlMainParams);
-
         ivSlides.setScaleType(ScaleType.FIT_XY);
 		flTimeline.bringToFront();
 	}
@@ -1127,15 +1245,29 @@ public class LODEActivity extends Activity implements OnClickListener,
 			sdTimeline.animateClose();
 		}
 		slideIsLarge = false;
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = (scrHeight * 5) / 6;
-		rlMain.removeView(rlSlide);
-        rlMain.addView(rlSlide, rlMainParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
-        rlMainParams.topMargin = 0;
-        rlMainParams.leftMargin = 0;
+		if(metrics.densityDpi == D_MEDIUM){
+	        rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+	        rlMainParams.topMargin = 0;
+	        rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
+	        rlMain.removeView(rlSlide);
+	        rlMain.addView(rlSlide, rlMainParams);
+
+	        rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+	        rlMainParams.topMargin = 0;
+	        rlMainParams.leftMargin = 0;
+		}
+		else{
+			rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
+	        rlMainParams.topMargin = 0;
+	        rlMainParams.leftMargin = (scrHeight * 5) / 6;
+			rlMain.removeView(rlSlide);
+	        rlMain.addView(rlSlide, rlMainParams);
+
+	        rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, scrHeight * 4 / 5);
+	        rlMainParams.topMargin = 0;
+	        rlMainParams.leftMargin = 0;
+		}
         if(slideInMain){
     		rlMain.removeView(ivSlides);
 			btnLockInPlace.setBackgroundResource(R.drawable.lock_locked);
@@ -1146,25 +1278,7 @@ public class LODEActivity extends Activity implements OnClickListener,
     		rlSlide.removeView(ivSlides);
         }
         rlSlide.addView(ivSlides, rlMainParams);
-
-//        rlMainParams = new RelativeLayout.LayoutParams(60, 50);
-//        rlMainParams.width = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.height = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.topMargin = 0;
-//        rlMainParams.leftMargin = scrWidth - 110;
-//        rlBottomBar.removeView(btnZoomIn);
-//        rlBottomBar.addView(btnZoomIn, rlMainParams);
-//
-//        rlMainParams = new RelativeLayout.LayoutParams(60, 50);
-//        rlMainParams.width = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.height = LayoutParams.WRAP_CONTENT;
-//        rlMainParams.topMargin = 0;
-//        rlMainParams.leftMargin = scrWidth - 150;
-//        rlBottomBar.removeView(btnLockInPlace);
-//        rlBottomBar.addView(btnLockInPlace, rlMainParams);
-        
         ivSlides.setScaleType(ScaleType.FIT_XY);
-        
         flTimeline.bringToFront();
 	}
 	public void growVideo(){
@@ -1188,6 +1302,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 			
 	        rlMainParams = new RelativeLayout.LayoutParams((scrWidth * 3) / 4, 70);
 	        rlMc.setGravity(Gravity.CENTER);
+	        if(metrics.densityDpi == D_MEDIUM){
+	        	rlMc.setPadding(0, dp(13), 0, 0);
+	        }
 	        rlMainParams.topMargin = scrHeight - 60;
 	        rlMainParams.leftMargin = 0;
 	        rlMain.removeView(rlMc);
@@ -1204,25 +1321,47 @@ public class LODEActivity extends Activity implements OnClickListener,
 		if(sdTimeline.isOpened()){
 			sdTimeline.animateClose();
 		}
-		videoIsLarge = false;
-		LayoutParams vidParams = vidView.getLayoutParams();
-		vidParams.width = (scrHeight * 5) / 6;
-		vidParams.height = (scrHeight * 15) / 24;
-		vidView.setLayoutParams(vidParams);
-		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
-		vidView.requestLayout();
-		vidView.invalidate();
-		vidView.bringToFront();
+        videoIsLarge = false;
+        if(metrics.densityDpi == D_MEDIUM){
+    		LayoutParams vidParams = vidView.getLayoutParams();
+    		vidParams.width = dp((scrWidth * 2) / 3 - 75);
+    		vidParams.height = dp((scrWidth * 2 - 75)/ 4);
+    		vidView.setLayoutParams(vidParams);
+    		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+    		vidView.requestLayout();
+    		vidView.invalidate();
+    		vidView.bringToFront();
 
-		vidParams = vidViewLayer.getLayoutParams();
-		vidParams.width = ((scrHeight * 3) / 4) + 5;
-		vidParams.height = (scrHeight * 3) / 4;
-		vidViewLayer.setLayoutParams(vidParams);
+    		vidParams = vidViewLayer.getLayoutParams();
+    		vidParams.width = dp((scrWidth * 2) / 3 - 75);
+    		vidParams.height = dp((scrWidth * 2 - 75)/ 4);
+    		vidViewLayer.setLayoutParams(vidParams);
 
-        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
-        rlMainParams.topMargin = (scrHeight * 15) / 24;;
-        rlMainParams.leftMargin = 0;
-        rlMc.setGravity(Gravity.CENTER_VERTICAL);
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp(50));
+            rlMainParams.topMargin = dp((scrWidth * 2 - 75)/ 4);
+            rlMainParams.leftMargin = 0;
+        	rlMc.setPadding(0, dp(5), 0, 0);
+        }
+        else{
+    		LayoutParams vidParams = vidView.getLayoutParams();
+    		vidParams.width = (scrHeight * 5) / 6;
+    		vidParams.height = (scrHeight * 15) / 24;
+    		vidView.setLayoutParams(vidParams);
+    		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+    		vidView.requestLayout();
+    		vidView.invalidate();
+    		vidView.bringToFront();
+
+    		vidParams = vidViewLayer.getLayoutParams();
+    		vidParams.width = ((scrHeight * 3) / 4) + 5;
+    		vidParams.height = (scrHeight * 3) / 4;
+    		vidViewLayer.setLayoutParams(vidParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, 70);
+            rlMainParams.topMargin = (scrHeight * 15) / 24;;
+            rlMainParams.leftMargin = 0;
+            rlMc.setGravity(Gravity.CENTER_VERTICAL);
+        }
         rlMain.removeView(rlMc);
         rlMain.addView(rlMc, rlMainParams);
 
@@ -1328,13 +1467,30 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	private void growInMainLayout(){
 		rlSlide.setBackgroundResource(R.layout.no_stroke);
-        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
-		rlMainParams.width = scrWidth;
-		rlMainParams.height = scrHeight;
-		rlMainParams.topMargin = 0;
-		rlMainParams.leftMargin = 0;
-		rlSlide.removeView(ivSlides);
-		rlMain.addView(ivSlides, rlMainParams);
+		if(metrics.densityDpi == D_MEDIUM){
+	        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+			rlMainParams.width = dp(scrWidth);
+			rlMainParams.height = dp(scrHeight);
+			rlMainParams.topMargin = 0;
+			rlMainParams.leftMargin = 0;
+			rlSlide.removeView(ivSlides);
+			rlMain.addView(ivSlides, rlMainParams);
+
+			defaultMatrix = new Matrix();
+			defaultMatrix.postScale(1, 1, 0, 0);
+		}
+		else{
+	        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+			rlMainParams.width = scrWidth;
+			rlMainParams.height = scrHeight;
+			rlMainParams.topMargin = 0;
+			rlMainParams.leftMargin = 0;
+			rlSlide.removeView(ivSlides);
+			rlMain.addView(ivSlides, rlMainParams);
+
+			defaultMatrix = new Matrix();
+			defaultMatrix.postScale(1, 1, scrWidth / 2, scrHeight / 2);
+		}
 		ivSlides.setOnTouchListener(this);
 		ivSlides.bringToFront();
 		ivSlides.requestLayout();
@@ -1345,9 +1501,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 		slideInMain = true;
 		slideIsLarge = true;
 		btnZoomIn.setEnabled(true);
-
-		defaultMatrix = new Matrix();
-		defaultMatrix.postScale(1, 1, scrWidth / 2, scrHeight / 2);
 		ivSlides.setImageMatrix(defaultMatrix);
 		ivSlides.setScaleType(ScaleType.MATRIX);
 		start = new PointF();
@@ -1408,7 +1561,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		alertNetwork.show();
 		return true;
 	}
-	public int convertToDp(int pixels){
+	public int dp(int pixels){
 		//return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pixels , getResources().getDisplayMetrics());
 		return (int) (pixels / getResources().getDisplayMetrics().density + 0.5);
 	}
