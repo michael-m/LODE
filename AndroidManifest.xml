@@ -16,7 +16,11 @@
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name">
-        <activity
+		<provider
+			android:name="it.unitn.lode.contentprovider.BookmarksContentProvider"
+			android:authorities="it.unitn.lode.contentprovider.BookmarksContentProvider">
+		</provider>
+	    <activity
             android:name=".LODECompatibilityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Transparent">
@@ -44,6 +48,8 @@
         </activity>
         <activity
             android:name=".PlayInFullScreenActivity" android:screenOrientation="landscape" />
-        </application>
-
+        <activity android:name=".LODEBmCreatorEditorActivity" android:screenOrientation="landscape"
+            android:theme="@style/Theme.Transparent">
+        </activity>
+	</application>
 </manifest>

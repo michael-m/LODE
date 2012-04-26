@@ -1,4 +1,11 @@
-LODroid - LODE for Android
-This is an Android implementation of the LODE Client. LODE is an E-learning application that performs two functions: 1) Recording lectures 2) Publishing lectures and courses
+This is an Android implementation of the LODE Client.
+
+LODE is a software for low-cost acquisition of lectures (specially if based on slide presentations).
+The (good quality) audio and video (640x480 pixels, interpolated) can be accompanied by images of 
+the slides projected in class (for Power-Point-based lectures), and by tools for navigating the 
+lecture (by section title, by other indexes or through a time-bar). LODE also allows attaching 
+arbitrary documents to any point of the lecture. Also, it allows producing DVDs with a whole course 
+on it (a full 50 hours course nicely fits on a single DVD). Single lectures can also be downloaded 
+from the Internet.
 
 To read more about the LODE project, visit latemar.science.unitn.it/segue/index.php?&site=LODE&section=36&action=site

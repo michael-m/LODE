@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rlMain"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:gravity="center_horizontal"
+	android:layout_gravity="center_horizontal"
+	android:background="#99d3d3d3">
+	<ListView
+		android:id="@android:id/list"
+		android:layout_width="500dp"
+		android:layout_height="wrap_content"
+		android:background="@layout/curved_corners"
+		android:fadingEdge="none"
+		android:cacheColorHint="#00000000"
+		android:divider="@android:color/darker_gray"
+		android:dividerHeight="1.0sp"
+		android:descendantFocusability="blocksDescendants"/>
+	<Button 
+	    android:id="@+id/btnAddBookmark"
+	    android:text="Add/Edit"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_marginLeft="100dp"
+	    android:layout_marginTop="100dp"/>
+</RelativeLayout>

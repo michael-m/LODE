@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,12 +16,12 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
 	private ArrayList<TextView> courses;
 	private Typeface tfApplegaramound = null;
 	public ArrayList<Integer> selectedIds = new ArrayList<Integer>();
-
-	public CoursesAdapter(Context context, int textViewResourceId,
-            ArrayList<TextView> courses) {
+	private DisplayMetrics metrics = null;
+	public CoursesAdapter(Context context, int textViewResourceId, ArrayList<TextView> courses, DisplayMetrics metrics) {
         super(context, textViewResourceId, courses);
         this.courses = courses;
         this.tfApplegaramound = Typeface.createFromAsset(LODETabsActivity.ASSETS, "fonts/Applegaramound.ttf");
+        this.metrics = metrics;
     }
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
@@ -38,12 +39,22 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
                 textViewTwo.setTag(tv.getId());
                 
                 if(position == 0){
-                    textViewTwo.setTextSize(15);
+                	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+                        textViewTwo.setTextSize(13);
+                	}
+                	else{
+                        textViewTwo.setTextSize(15);
+                	}
                     textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD);
                     textViewTwo.setGravity(Gravity.CENTER);
                 }
                 else{
-                    textViewTwo.setTextSize(14);
+                	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+                        textViewTwo.setTextSize(12);
+                	}
+                	else{
+                        textViewTwo.setTextSize(14);
+                	}
                     textViewTwo.setTypeface(tfApplegaramound, Typeface.NORMAL);
                     textViewTwo.setPadding(15, 5, 10, 5);
                     textViewTwo.setGravity(Gravity.LEFT);

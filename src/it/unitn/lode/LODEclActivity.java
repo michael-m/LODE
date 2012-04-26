@@ -15,12 +15,15 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageButton;
@@ -29,14 +32,12 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-public class LODEclActivity extends Activity implements OnItemClickListener{
+public class LODEclActivity extends Activity implements OnItemClickListener, OnClickListener{
 	private LodeSaxDataParser lecturesParser = null;
 	private ListView lvCourses = null;
 	private ListView lvLectures = null;
-	public static ListView lvLectureInfo = null;
 	private ArrayList<TextView> courses = null;
 	private ArrayList<TextView> lectures = null;
-	private ArrayList<LectureInfo> lectureInfo = null;
 	private RelativeLayout rlCL = null;
 	private RelativeLayout.LayoutParams rlCLParams = null;
 	private LodeSaxDataParser coursesParser = null;
@@ -50,13 +51,10 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	private Handler handler = null;
 	private final Context coursesContext = this;
 	private TextView tvCourse = null;
-	private TextView tvInfoItem = null;
 	private Courses selectedCourse = null;
 	private TextView tvItem = null;
 	private final int LV_COURSES = 0;
 	private final int LV_LECTURES = 1;
-	private final int LV_LECTURE_INFO = 2;
-	//private final int LV_LECTURE_INFO = 2;
 	private int currPos = 0;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
@@ -65,11 +63,79 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 	private AlertDialog alertNetwork = null, alertExit = null, alertWrongData = null;
 	private boolean comingFromSettings = false;
 	private ProgressBar pbCL = null;
+	private DisplayMetrics metrics = null;
+	public static int scrWidth, scrHeight;
+
+	
+	private RelativeLayout rlLectureInfo = null;
+	private RelativeLayout rlLIContainer = null;
+	private RelativeLayout rlButtons = null;
+	private TextView tvLectureInfo = null;
+	private RelativeLayout.LayoutParams rlLIParams = null;
+	private Typeface tfApplegaramound = null;
+	private final int WATCH = 0, DOWNLOAD = 1, INFO = 2;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
         setContentView(R.layout.courses_lectures);
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+	    metrics = new DisplayMetrics();
+	    getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        scrWidth = metrics.widthPixels;
+        scrHeight = metrics.heightPixels;
+
+        
+/******* LECTURE INFO AND OPTIONS LAYOUT ******/
+        rlLIContainer = new RelativeLayout(this);
+        rlLIContainer.setBackgroundColor(Color.TRANSPARENT);
+        rlLIContainer.setGravity(Gravity.CENTER_HORIZONTAL);
+        rlLIContainer.setVisibility(View.GONE);
+
+        rlButtons = new RelativeLayout(this);
+        rlLectureInfo = new RelativeLayout(this);
+        rlLectureInfo.setBackgroundResource(R.layout.lecture_info);
+        btnWatch = new ImageButton(this);
+        btnDownload = new ImageButton(this);
+        tvLectureInfo = new TextView(this);
+        
+        btnWatch.setImageResource(android.R.drawable.ic_media_play);
+        btnWatch.setOnClickListener(this);
+        btnWatch.setId(WATCH);
+        btnDownload.setImageResource(android.R.drawable.stat_sys_download);
+        btnDownload.setOnClickListener(this);
+        btnDownload.setId(DOWNLOAD);
+        tvLectureInfo.setId(INFO);
+        tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
+        tvLectureInfo.setTextSize(13);
+        tvLectureInfo.setTextColor(Color.BLACK);
+        tvLectureInfo.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        rlLectureInfo.setGravity(Gravity.CENTER_HORIZONTAL);
+        rlLectureInfo.setPadding(10, 10, 10, 10);
+        
+        rlLIParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, 150);
+        rlLectureInfo.addView(tvLectureInfo, rlLIParams);
+        
+        rlButtons.setPadding(0, 15, 10, 0);
+        
+        rlLIParams = new RelativeLayout.LayoutParams(50, 50);
+        rlLIParams.leftMargin = scrWidth / 4 - 55;
+        rlButtons.addView(btnWatch, rlLIParams);
+
+        rlLIParams = new RelativeLayout.LayoutParams(50, 50);
+        rlLIParams.leftMargin = scrWidth / 4 + 5;
+        rlButtons.addView(btnDownload, rlLIParams);
+        
+        rlLIParams = new RelativeLayout.LayoutParams(scrWidth / 2, scrHeight / 2);
+        rlLIContainer.addView(rlLectureInfo, rlLIParams);
+        rlLIParams = new RelativeLayout.LayoutParams(scrWidth / 2, 80);
+        rlLIParams.topMargin = scrHeight / 2 - 80;
+        rlLIContainer.addView(rlButtons, rlLIParams);
+/********** END ***********/        
+        
+        
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
 		       .setTitle("Lode4Android: No Internet Access")
@@ -124,16 +190,17 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
         lvCourses.setId(LV_COURSES);
         lvLectures = new ListView(this);
         lvLectures.setId(LV_LECTURES);
-        lvLectureInfo = (ListView) findViewById(R.id.lvLectureInfo);
-        lvLectureInfo.setId(LV_LECTURE_INFO);
         
         rlCL = (RelativeLayout) findViewById(R.id.rlCL);
-        btnWatch = (ImageButton) findViewById(R.id.btnWatch);
-        btnDownload = (ImageButton) findViewById(R.id.btnDownload);
 
+/*** ADD LECTURE INFO AND OPTIONS LAYOUT TO MAIN LAYOUT *****/
+        rlLIParams = new RelativeLayout.LayoutParams(scrWidth / 2, scrHeight / 2);
+        rlLIParams.topMargin = scrHeight/ 6 + 10;
+        rlLIParams.leftMargin = scrWidth / 4 - 15;
+        rlCL.addView(rlLIContainer, rlLIParams);
+/****** END ******/
         courses = new ArrayList<TextView>();
         lectures = new ArrayList<TextView>();
-        lectureInfo = new ArrayList<LectureInfo>();
         cl = new TreeMap<Integer, List<Lectures>>();
         tvCourse = new TextView(this);
         
@@ -190,14 +257,9 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 				}
 			}
 		};
-//		if(isConnected()){
 		pbCL.setVisibility(View.VISIBLE);
 		new Thread(coursesPopulator).start();
-//		}
-//		else{
-//			alert.show();
-//		}
-        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses){
+        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
 			@Override
 			public boolean isEnabled(int position) {
 				if(position == 0)
@@ -205,62 +267,55 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 				return true;
 			}
 		});
-        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures){
+        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures, metrics){
 			@Override
 			public boolean isEnabled(int position) {
 				if(position == 0)
 					return false;
 				return true;
-			}
-		});
-		lvLectureInfo.setAdapter(new LectureInfoAdapter(this, R.layout.lecture_info_layout, lectureInfo){
-			@Override
-			public boolean isEnabled(int position) {
-				return false;
 			}
 		});
         lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
-        //lvCourses.setSelector(R.layout.courses_corners_clicked);
         lvCourses.setSelector(R.drawable.list_item);
         lvCourses.setDividerHeight(2);
         lvCourses.setOnItemClickListener(this);
-        
-        rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth / 3, LODETabsActivity.scrHeight);
-        rlCL.addView(lvCourses, rlCLParams);
 
+        
         lvLectures.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvLectures.setCacheColorHint(Color.parseColor("#00000000"));
         lvLectures.setBackgroundResource(R.layout.courses_corners);
         lvLectures.setSelector(R.layout.courses_corners_clicked);
         lvLectures.setDividerHeight(2);
         lvLectures.setOnItemClickListener(this);
-        
-        rlCLParams = new RelativeLayout.LayoutParams(LODETabsActivity.scrWidth * 2 / 3 - 10, LODETabsActivity.scrHeight);
-        rlCLParams.leftMargin = LODETabsActivity.scrWidth / 3 + 5;
-        rlCL.addView(lvLectures, rlCLParams);
 
-        rlCLParams = new RelativeLayout.LayoutParams((LODETabsActivity.scrWidth * 6) / 14, (LODETabsActivity.scrHeight * 6) / 14);
-        rlCLParams.topMargin = LODETabsActivity.scrHeight / 4;
-        rlCLParams.leftMargin = (LODETabsActivity.scrWidth * 28) / 100;
-        lvLectureInfo.setChoiceMode(ListView.CHOICE_MODE_NONE);
-        lvLectureInfo.setCacheColorHint(Color.parseColor("#00000000"));
-        lvLectureInfo.setBackgroundResource(R.layout.lecture_info);
-        lvLectureInfo.setDividerHeight(0);
-        lvLectureInfo.setVisibility(View.INVISIBLE);
-        rlCL.removeView(lvLectureInfo);
-        rlCL.addView(lvLectureInfo, rlCLParams);
+/***** ADD VIEWS TO LAYOUTS ******/
+        if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+            rlCLParams = new RelativeLayout.LayoutParams(dp(scrWidth / 3), dp(scrHeight));
+            rlCL.addView(lvCourses, rlCLParams);
+            
+            rlCLParams = new RelativeLayout.LayoutParams(dp(scrWidth * 2 / 3 - 10), dp(scrHeight));
+            rlCLParams.leftMargin = dp(scrWidth / 3 + 5);
+            rlCL.addView(lvLectures, rlCLParams);
+        }
+        else{
+            rlCLParams = new RelativeLayout.LayoutParams(scrWidth / 3, scrHeight);
+            rlCL.addView(lvCourses, rlCLParams);
+            
+            rlCLParams = new RelativeLayout.LayoutParams(scrWidth * 2 / 3 - 10, scrHeight);
+            rlCLParams.leftMargin = scrWidth / 3 + 5;
+            rlCL.addView(lvLectures, rlCLParams);
+        }
+/************* END ******************/        
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		//parent.setSelection(position);
-//		Log.e("On item click", "being called");
 		final Integer POSITION = position;
 		if(parent.getId() == LV_COURSES){
 		     lvLectures.setEnabled(false);
-			if(lvLectureInfo.getVisibility() == View.VISIBLE){
-				lvLectureInfo.setVisibility(View.INVISIBLE);
+			if(rlLIContainer.getVisibility() == View.VISIBLE){
+				rlLIContainer.setVisibility(View.INVISIBLE);
 			}
 			currPos = position;
 			tvItem = (TextView) parent.getItemAtPosition(position);
@@ -293,7 +348,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								if(cl.get(POSITION) == null){
 									ls = lecturesParser.parseLectures();
 									cl.put(POSITION, ls);
-//						        	Log.e("Retrieving from: ", "online");
 								}
 								lsIterator = cl.get(POSITION).iterator();
 								handler.post(new Runnable() {
@@ -315,9 +369,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 								        	tvItem.setText(lTitle);
 								        	lectures.add(tvItem);
 								        }
-//										for(int pos = 0; pos < lvLectures.getCount(); pos++){
-//											lvLectures.getChildAt(pos).setBackgroundColor(Color.parseColor("#30d3d3d3"));
-//										}
 										pbCL.setVisibility(View.GONE);
 										lvLectures.setEnabled(true);
 								        lvLectures.invalidateViews();
@@ -339,36 +390,26 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 							}
 						}
 					};
-//					if(isConnected()){
 					pbCL.setVisibility(View.VISIBLE);
 					new Thread(lecturesPopulator).start();
-//					}
-//					else{
-//						alert.show();
-//					}
 					break;
 				}
 			}
 		}
 		else if(parent.getId() == LV_LECTURES){
-			tvInfoItem = new TextView(this);
-			tvInfoItem.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
+			tvLectureInfo.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
 								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
 								+ cl.get(currPos).get(position - 1).getDocentel());
-			lectureInfo.removeAll(lectureInfo);
-			LectureInfo lecInfo = new LectureInfo(tvInfoItem, btnWatch, btnDownload, cl.get(currPos).get(position - 1).getUrllez(),
-					baseUrl + cl.get(currPos).get(position - 1).getFolderl());
-			lectureInfo.add(lecInfo);
-			lvLectureInfo.invalidateViews();
-			lvLectureInfo.setVisibility(View.VISIBLE);
-			lvLectures.setEnabled(false);
-			lvLectureInfo.bringToFront();
+			btnWatch.setTag(R.id.videoUrl, cl.get(currPos).get(position - 1).getUrllez());
+			btnWatch.setTag(R.id.lectureDataUrl, baseUrl + cl.get(currPos).get(position - 1).getFolderl());
+			rlLIContainer.setVisibility(View.VISIBLE);
+			rlLIContainer.bringToFront();
 		}
 	}
 	@Override
 	public void onBackPressed() {
-		if(lvLectureInfo.getVisibility() == View.VISIBLE){
-			lvLectureInfo.setVisibility(View.INVISIBLE);
+		if(rlLIContainer.getVisibility() == View.VISIBLE){
+			rlLIContainer.setVisibility(View.GONE);
 			lvLectures.setEnabled(true);
 		}
 		else{
@@ -385,30 +426,25 @@ public class LODEclActivity extends Activity implements OnItemClickListener{
 		}
 	}
 	private boolean isConnected() {
-//	    boolean isWifi = false;
-//	    boolean isMobile = false;
-
 	    ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-//	    NetworkInfo[] netInfo = cm.getAllNetworkInfo();
 	    return cm.getActiveNetworkInfo() == null ? false : cm.getActiveNetworkInfo().isAvailable();
-//	    for (NetworkInfo ni : netInfo) {
-//	        if (("WIFI").equals(ni.getTypeName())){
-//	            if (ni.isConnected()){
-//	                isWifi = true;
-//	            }
-//	        }
-//	        if (("MOBILE").equals(ni.getTypeName())){
-//	            if (ni.isConnected()){
-//	                isMobile = true;
-//	            }
-//	        }
-//	    }
-//	    return isWifi || isMobile;
 	}
-	public int convertToDp(int input){
-		// Get the screen's density scale
-		final float scale = getResources().getDisplayMetrics().density;
-		// Convert the dps to pixels, based on density scale
-		return (int) (input * scale + 0.5f);
+	public int dp(int pixels){
+		//return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pixels , getResources().getDisplayMetrics());
+		return (int) (pixels / getResources().getDisplayMetrics().density + 0.5);
+	}
+	@Override
+	public void onClick(View v) {
+		if(v.getId() == WATCH){
+			String videoUrl = (String) btnWatch.getTag(R.id.videoUrl);
+			String lectureDataUrl = (String) btnWatch.getTag(R.id.lectureDataUrl);
+			Bundle bundle = new Bundle();
+			bundle.putString("videoUrl",videoUrl);
+			bundle.putString("lectureDataUrl", lectureDataUrl);
+			Intent intent = new Intent(this, LODEActivity.class);
+			rlLIContainer.setVisibility(View.GONE);
+			intent.putExtras(bundle);
+			startActivity(intent);
+		}
 	}
 }

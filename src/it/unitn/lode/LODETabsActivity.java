@@ -17,7 +17,8 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
 	private Typeface tfApplegaramound = null;
 	private Display devDisplay = null;
 	public static int scrWidth, scrHeight;
-	public static AssetManager ASSETS = null;
+	protected static AssetManager ASSETS = null;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

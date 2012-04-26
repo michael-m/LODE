@@ -67,9 +67,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 	OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
 	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener, OnErrorListener{
     /** Called when the activity is first created. */
-	public static int scrWidth, scrHeight;
+	private static int scrWidth, scrHeight;
 	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8,
-			ZOOMIN = 9, ZOOMOUT = 10, LOCK = 11;
+			ZOOMIN = 9, ZOOMOUT = 10, LOCK = 11, BOOKMARK = 12, INFO = 13;
 	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null, tvTime = null;
@@ -82,6 +82,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private ImageButton btnZoomIn = null;
 	private ImageButton btnZoomOut = null;
 	private ImageButton btnLockInPlace = null;
+	private ImageButton btnBookmark = null;
+	private ImageButton btnInfo = null;
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	public static int currPos = 0;
@@ -530,6 +532,14 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnLockInPlace.setId(LOCK);
         btnLockInPlace.setBackgroundResource(R.drawable.lock_locked);
         btnLockInPlace.setOnClickListener(this);
+        
+        btnBookmark = new ImageButton(this);
+        btnBookmark.setId(BOOKMARK);
+        btnBookmark.setBackgroundResource(R.drawable.bookmark);
+        
+        btnInfo = new ImageButton(this);
+        btnInfo.setId(INFO);
+        btnInfo.setBackgroundResource(android.R.drawable.ic_dialog_info);
 
 //        hideMc();
 
@@ -658,6 +668,37 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.topMargin = dp(15);
             rlMainParams.leftMargin = dp(130);
             rlBottomBar.addView(btnLockInPlace, rlMainParams);
+            
+            
+            
+            
+            
+            
+            
+            
+            rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+            rlMainParams.width = LayoutParams.WRAP_CONTENT;
+            rlMainParams.height = LayoutParams.WRAP_CONTENT;
+            rlMainParams.topMargin = 7;
+            rlMainParams.leftMargin = 230;
+            rlBottomBar.addView(btnBookmark, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(0, 0);
+            rlMainParams.width = LayoutParams.WRAP_CONTENT;
+            rlMainParams.height = LayoutParams.WRAP_CONTENT;
+            rlMainParams.topMargin = 3;
+            rlMainParams.leftMargin = scrWidth - 70;
+            rlBottomBar.addView(btnInfo, rlMainParams);
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
 
             rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
             rlMainParams.topMargin = 0;
@@ -679,9 +720,6 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 0;
             rlMain.addView(btnFullScreen, rlMainParams);
-        }
-        else if(metrics.densityDpi == D_LOW){
-        	LODEActivity.this.finish();
         }
         else{
 
@@ -742,20 +780,45 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMain.addView(rlBottomBar, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(85, 50);
-            rlMainParams.topMargin = 0;
+            rlMainParams.topMargin = 10;
             rlMainParams.leftMargin = 0;
             rlBottomBar.addView(btnZoomOut, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(85, 50);
-            rlMainParams.topMargin = 0;
+            rlMainParams.topMargin = 10;
             rlMainParams.leftMargin = 100;
             rlBottomBar.addView(btnZoomIn, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(40, 40);
-            rlMainParams.topMargin = 3;
+            rlMainParams.topMargin = 12;
             rlMainParams.leftMargin = 170;
             rlBottomBar.addView(btnLockInPlace, rlMainParams);
 
+            
+            
+            
+            
+            
+            
+            rlMainParams = new RelativeLayout.LayoutParams(55, 55);
+            rlMainParams.topMargin = 7;
+            rlMainParams.leftMargin = 230;
+            rlBottomBar.addView(btnBookmark, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(60, 60);
+            rlMainParams.topMargin = 3;
+            rlMainParams.leftMargin = scrWidth - 70;
+            rlBottomBar.addView(btnInfo, rlMainParams);
+
+            
+            
+            
+            
+            
+            
+            
+            
+            
             rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = (scrHeight * 5) / 6;
@@ -823,13 +886,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 		}
 		else if(view.getId() == FF){
-			vidView.seekTo(vidView.getCurrentPosition() + 500 < vidView.getDuration() ?
-					vidView.getCurrentPosition() + 500 : 
+			vidView.seekTo(vidView.getCurrentPosition() + 10000 < vidView.getDuration() ?
+					vidView.getCurrentPosition() + 10000 : 
 						vidView.getDuration() - 1);
 		}
 		else if(view.getId() == RR){
-			vidView.seekTo(vidView.getCurrentPosition() - 500 > 0 ?
-					vidView.getCurrentPosition() - 500 : 
+			vidView.seekTo(vidView.getCurrentPosition() - 10000 > 0 ?
+					vidView.getCurrentPosition() - 10000 : 
 						0);
 		}
 		else if(view.getId() == SLIDE){
@@ -954,9 +1017,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 	@Override
 	protected void onResume() {
 		super.onResume();
-//		if(!isConnected()){
-//			alertNetwork.show();
-//		}
 		keepCounting = true;
 		if(timeUpdaterThread != null){
 			Log.e("onResume", "Starting Time Updater");
@@ -992,6 +1052,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				hasFinished = false;
 			}
 			firstTime = false;
+			fullScreen = false;
 		}
 	}
 	public void hideMc(){
