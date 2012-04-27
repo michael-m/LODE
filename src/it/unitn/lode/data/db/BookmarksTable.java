@@ -10,12 +10,14 @@ public class BookmarksTable {
 	public static final String COLUMN_ID = "_id";
 	public static final String COLUMN_NOTE = "note";
 	public static final String COLUMN_TIME = "time";
+	public static final String COLUMN_LECTURE_ID = "lecture_id";
 
 	//SQL for creating DB and Table
 	private static final String DATABASE_CREATE = "create table " + TABLE_BOOKMARKS	+ "("
 			+ COLUMN_ID + " integer primary key autoincrement, " 
 			+ COLUMN_NOTE + " text not null, " 
-			+ COLUMN_TIME + " integer not null);";
+			+ COLUMN_TIME + " text not null, "
+			+ COLUMN_LECTURE_ID + " text not null);";
 
 	public static void onCreate(SQLiteDatabase database) {
 		database.execSQL(DATABASE_CREATE);

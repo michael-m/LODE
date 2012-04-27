@@ -14,7 +14,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.text.TextUtils;
-import android.util.Log;
 
 public class BookmarksContentProvider extends ContentProvider {
 
@@ -122,8 +121,7 @@ public class BookmarksContentProvider extends ContentProvider {
 	}
 
 	@Override
-	public int update(Uri uri, ContentValues values, String selection,
-			String[] selectionArgs) {
+	public int update(Uri uri, ContentValues values, String selection,	String[] selectionArgs) {
 
 		int uriType = sURIMatcher.match(uri);
 		SQLiteDatabase sqlDB = database.getWritableDatabase();
@@ -149,14 +147,14 @@ public class BookmarksContentProvider extends ContentProvider {
 	}
 
 	private void checkColumns(String[] projection) {
-		String[] available = {BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME, BookmarksTable.COLUMN_ID};
+		String[] available = {BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME, BookmarksTable.COLUMN_ID,
+				BookmarksTable.COLUMN_LECTURE_ID};
 		if (projection != null) {
 			HashSet<String> requestedColumns = new HashSet<String>(Arrays.asList(projection));
 			HashSet<String> availableColumns = new HashSet<String>(	Arrays.asList(available));
 			// Check if all columns which are requested are available
 			if (!availableColumns.containsAll(requestedColumns)) {
-				throw new IllegalArgumentException(
-						"Unknown columns in projection");
+				throw new IllegalArgumentException("Unknown columns in projection");
 			}
 		}
 	}

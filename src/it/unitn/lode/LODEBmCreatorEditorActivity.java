@@ -1,5 +1,7 @@
 package it.unitn.lode;
 
+import java.util.concurrent.TimeUnit;
+
 import it.unitn.lode.contentprovider.BookmarksContentProvider;
 import it.unitn.lode.data.db.BookmarksTable;
 import android.app.Activity;
@@ -10,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -28,6 +31,7 @@ public class LODEBmCreatorEditorActivity extends Activity {
 	private RelativeLayout.LayoutParams rlCEParams = null;
 	private DisplayMetrics metrics = null;
 	private static int scrWidth, scrHeight;
+	private Bundle extras = null;
 
 	@Override
 	protected void onCreate(Bundle bundle) {
@@ -75,18 +79,20 @@ public class LODEBmCreatorEditorActivity extends Activity {
 		rlCEParams.leftMargin = 100;
 		rlCE.addView(rlCEChild, rlCEParams);
 
-		Bundle extras = getIntent().getExtras();
+		extras = getIntent().getExtras();
 
 		// Check from the saved Instance
 		bookmarksUri = (bundle == null) ? null : (Uri) bundle.getParcelable(BookmarksContentProvider.CONTENT_ITEM_TYPE);
 		// Or passed from the other activity
-		if (extras != null) {
+		if (extras.getParcelable(BookmarksContentProvider.CONTENT_ITEM_TYPE) != null) {
 			bookmarksUri = extras.getParcelable(BookmarksContentProvider.CONTENT_ITEM_TYPE);
+			if(bookmarksUri == null)
+				Log.e("bookmarksUri", "NULL");
 			fillData(bookmarksUri);
 		}
 	}
 	private void fillData(Uri uri) {
-		String[] projection = { BookmarksTable.COLUMN_NOTE,	BookmarksTable.COLUMN_TIME};
+		String[] projection = {BookmarksTable.COLUMN_NOTE,	BookmarksTable.COLUMN_TIME};
 		Cursor cursor = getContentResolver().query(uri, projection, null, null,	null);
 		if (cursor != null) {
 			cursor.moveToFirst();
@@ -114,7 +120,8 @@ public class LODEBmCreatorEditorActivity extends Activity {
 		}
 		ContentValues values = new ContentValues();
 		values.put(BookmarksTable.COLUMN_NOTE, note);
-		values.put(BookmarksTable.COLUMN_TIME, "2:00");
+		values.put(BookmarksTable.COLUMN_TIME, extras.getString("time"));
+		values.put(BookmarksTable.COLUMN_LECTURE_ID, extras.getString("lectureId"));
 		if (bookmarksUri == null) {
 			// New Bookmark
 			bookmarksUri = getContentResolver().insert(BookmarksContentProvider.CONTENT_URI, values);

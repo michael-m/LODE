@@ -5,7 +5,7 @@
     <TextView
         android:id="@+id/tvBookmarkNote"
         android:textColor="@android:color/black"
-        android:layout_width="300dp"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
         android:lines="1"
         android:layout_marginTop="6dp"

@@ -26,20 +26,21 @@ public final class R {
         public static final int tray_handle_normal_v=0x7f02000c;
     }
     public static final class id {
-        public static final int btnAddBookmark=0x7f040017;
+        public static final int btnAddBookmark=0x7f040018;
         public static final int flTimeline=0x7f04000e;
         public static final int handle_v=0x7f040010;
         public static final int lectureDataUrl=0x7f040000;
         public static final int llFsVideo=0x7f04000b;
-        public static final int llTabs=0x7f04001a;
-        public static final int lvBookmarks=0x7f040016;
+        public static final int llTabs=0x7f04001b;
+        public static final int lvBookmarks=0x7f040017;
+        public static final int lvBookmarksToRemove=0x7f040016;
         public static final int lvTimeline=0x7f040012;
         public static final int pbCL=0x7f040007;
         public static final int pbFsVideo=0x7f04000c;
         public static final int rlBottomBar=0x7f040015;
         public static final int rlCE=0x7f040008;
         public static final int rlCL=0x7f040006;
-        public static final int rlLectures=0x7f040018;
+        public static final int rlLectures=0x7f040019;
         public static final int rlMain=0x7f04000d;
         public static final int rlMc=0x7f040013;
         public static final int rlSlide=0x7f040014;
@@ -50,7 +51,7 @@ public final class R {
         public static final int tvBookmarkTime=0x7f040003;
         public static final int tvCourses=0x7f040005;
         public static final int tvId=0x7f040004;
-        public static final int tvSlidePos=0x7f040019;
+        public static final int tvSlidePos=0x7f04001a;
         public static final int videoUrl=0x7f040001;
         public static final int vvFsVideo=0x7f04000a;
     }

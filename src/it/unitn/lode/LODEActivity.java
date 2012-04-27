@@ -1,7 +1,9 @@
 package it.unitn.lode;
 
+import it.unitn.lode.contentprovider.BookmarksContentProvider;
 import it.unitn.lode.data.LodeSaxDataParser;
 import it.unitn.lode.data.TimedSlides;
+import it.unitn.lode.data.db.BookmarksTable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,12 +14,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-
-import android.text.BoringLayout.Metrics;
 import android.util.DisplayMetrics;
 import android.util.FloatMath;
 import android.util.Log;
-import android.util.TypedValue;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -40,17 +41,25 @@ import android.media.MediaPlayer.OnPreparedListener;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.Display;
+import android.view.ContextMenu;
 import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
+import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.ImageView.ScaleType;
 import android.widget.ProgressBar;
 import android.widget.AdapterView.OnItemClickListener;
@@ -65,12 +74,12 @@ import android.widget.TextView;
 
 public class LODEActivity extends Activity implements OnClickListener,
 	OnCompletionListener, OnSeekBarChangeListener, OnDrawerScrollListener, OnDrawerOpenListener,
-	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener, OnErrorListener{
+	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener, OnErrorListener, OnItemLongClickListener{
     /** Called when the activity is first created. */
 	private static int scrWidth, scrHeight;
 	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8,
 			ZOOMIN = 9, ZOOMOUT = 10, LOCK = 11, BOOKMARK = 12, INFO = 13;
-	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null;
+	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null, rlBookmarks = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null, tvTime = null;
 	public static VidView vidView = null;
@@ -99,7 +108,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private FrameLayout flTimeline = null;
 	private FrameLayout.LayoutParams flParams = null;
 	private ListView lvTimeline = null;
-	private RelativeLayout rlTimeline = null;
+	//private RelativeLayout rlTimeline = null;
 	private ArrayList<TextView> slidePos = null;
 	private Intent fsIntent = null;
 	private Bundle fsBundle = null;
@@ -132,11 +141,49 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private AlertDialog alertNetwork = null, alertWrongData = null, alertEndLesson = null;
 	private DisplayMetrics metrics = null;
 
+	private static final int ACTIVITY_CREATE = 0;
+	private static final int ACTIVITY_EDIT = 1;
+	private static final int DELETE_ID = Menu.FIRST + 1;
+	private SimpleCursorAdapter adapter;
+	private Button btnAddBookmark = null;
+	private String selectedId = "";
+	private String selectedTime = "";
+	private List<String> bookmarkIds = null;
+	private List<String> bookmarkTimes = null;
+	private ListView lvBookmarks = null;
+	static class ViewHolder{
+		TextView tvTime;
+	}
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
+		lvBookmarks = (ListView) findViewById(R.id.lvBookmarks);
+		
+		rlBookmarks = new RelativeLayout(this);
+		rlBookmarks.setBackgroundColor(android.R.color.transparent);
+		rlBookmarks.setGravity(Gravity.CENTER);
+
+		bookmarkIds = new ArrayList<String>();
+		bookmarkTimes = new ArrayList<String>();
+		btnAddBookmark = (Button) findViewById(R.id.btnAddBookmark);
+		btnAddBookmark.setVisibility(View.GONE);
+		btnAddBookmark.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Intent i = new Intent(getApplicationContext(), LODEBmCreatorEditorActivity.class);
+				Bundle bundle = new Bundle();
+				bundle.putString("lectureId", lectureDataUrl);
+				bundle.putString("time", convertTime(TimeUnit.MILLISECONDS.toSeconds((vidView.getCurrentPosition()))));
+				i.putExtras(bundle);
+				startActivityForResult(i, ACTIVITY_CREATE);
+			}
+		});
+		registerForContextMenu(lvBookmarks);
+		lvBookmarks.setOnItemClickListener(this);
+		lvBookmarks.setOnItemLongClickListener(this);
+		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
@@ -218,12 +265,14 @@ public class LODEActivity extends Activity implements OnClickListener,
         lectureDataUrl = watchBundle.getString("lectureDataUrl");
         watchBundle = null;
         
-        ASSETS = getAssets();
+		fillData();
+
+		ASSETS = getAssets();
         tfApplegaramound = Typeface.createFromAsset(ASSETS, "fonts/Applegaramound.ttf");
         flTimeline = (FrameLayout) findViewById(R.id.flTimeline);
-        rlTimeline = (RelativeLayout) findViewById(R.id.rlTimeline);
+        //rlTimeline = (RelativeLayout) findViewById(R.id.rlTimeline);
 
-        rlTimeline.setBackgroundResource(R.layout.timeline);
+        //rlTimeline.setBackgroundResource(R.layout.timeline);
         
         slideTitles = new ArrayList<String>();
         slideTempo = new ArrayList<Integer>();
@@ -536,6 +585,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnBookmark = new ImageButton(this);
         btnBookmark.setId(BOOKMARK);
         btnBookmark.setBackgroundResource(R.drawable.bookmark);
+        btnBookmark.setOnClickListener(this);
         
         btnInfo = new ImageButton(this);
         btnInfo.setId(INFO);
@@ -723,6 +773,19 @@ public class LODEActivity extends Activity implements OnClickListener,
         }
         else{
 
+            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, scrHeight / 3);
+            rlMain.removeView(lvBookmarks);
+            rlBookmarks.addView(lvBookmarks, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+            rlMainParams.topMargin = scrHeight / 3;
+            rlMainParams.leftMargin = scrWidth / 6;
+            rlMain.removeView(btnAddBookmark);
+            rlBookmarks.addView(btnAddBookmark, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(scrWidth / 2, scrWidth / 2);
+            rlMain.addView(rlBookmarks, rlMainParams);
+
             rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 0;
@@ -840,7 +903,77 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.leftMargin = 0;
             rlMain.addView(btnFullScreen, rlMainParams);
         }
-}
+	}
+
+	
+	
+	
+	
+	
+	
+	
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+		if(resultCode == Activity.RESULT_OK){
+			refreshIds();
+		}
+		super.onActivityResult(requestCode, resultCode, intent);
+	}
+	private void fillData() {
+		String[] projection = {BookmarksTable.COLUMN_ID, BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME};
+		String selection = BookmarksTable.COLUMN_LECTURE_ID + "=?";
+		String[] selectionArgs = {lectureDataUrl};
+		String sortOrder = BookmarksTable.COLUMN_TIME;
+		Cursor cursor = getContentResolver().query(BookmarksContentProvider.CONTENT_URI, projection, selection, selectionArgs,
+				sortOrder);
+		if (cursor != null) {
+			cursor.moveToFirst();
+			while(!cursor.isAfterLast()){
+				bookmarkIds.add(cursor.getString(cursor.getColumnIndex(BookmarksTable.COLUMN_ID)));
+				bookmarkTimes.add(cursor.getString(cursor.getColumnIndex(BookmarksTable.COLUMN_TIME)));
+				cursor.moveToNext();
+			}
+			String[] from = new String[] {BookmarksTable.COLUMN_ID, BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME};
+			int[] to = new int[] {R.id.tvId, R.id.tvBookmarkNote, R.id.tvBookmarkTime};
+			adapter = new SimpleCursorAdapter(this, R.layout.bookmark_row, cursor, from, to);
+			lvBookmarks.setAdapter(adapter);
+		}
+	}
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		super.onCreateContextMenu(menu, v, menuInfo);
+		menu.add(0, DELETE_ID, 1, "Delete bookmark");
+		menu.add(0, ACTIVITY_EDIT, 0, "Edit bookmark");
+	}
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case DELETE_ID:
+			AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
+			Uri uri = Uri.parse(BookmarksContentProvider.CONTENT_URI + "/" + info.id);
+			getContentResolver().delete(uri, null, null);
+			fillData();
+			return true;
+		case ACTIVITY_EDIT:
+			Intent i = new Intent(this, LODEBmCreatorEditorActivity.class);
+			Uri bookmarkUri = Uri.parse(BookmarksContentProvider.CONTENT_URI + "/" + selectedId);
+			Bundle bundle = new Bundle();
+			bundle.putParcelable(BookmarksContentProvider.CONTENT_ITEM_TYPE, bookmarkUri);
+			bundle.putString("lectureId", lectureDataUrl);
+			bundle.putString("time", selectedTime);
+			i.putExtras(bundle);
+			startActivityForResult(i, ACTIVITY_EDIT);
+			break;
+		}
+		return super.onContextItemSelected(item);
+	}
+	@Override
+	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+		selectedId = bookmarkIds.get(position);
+		selectedTime = bookmarkTimes.get(position);
+		return false;
+	}
 	@Override
 	public void onClick(View view) {
 		if(view.getId() == PLAY){
@@ -1001,6 +1134,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 				correctSlideMatrix(ScaleType.FIT_XY);
 			}
 		}
+		else if(view.getId() == BOOKMARK){
+			lvBookmarks.setVisibility(lvBookmarks.getVisibility() == View.VISIBLE?View.GONE:View.VISIBLE);
+			btnAddBookmark.setVisibility(btnAddBookmark.getVisibility() == View.VISIBLE?View.GONE:View.VISIBLE);
+			rlBookmarks.bringToFront();
+			lvBookmarks.bringToFront();
+			btnAddBookmark.bringToFront();
+		}
 	}
 	@Override
 	protected void onPause() {
@@ -1030,7 +1170,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			timeUpdaterThread = new Thread(timeUpdater);
 			timeUpdaterThread.start();
 		}
-		if(firstTime || fullScreen){
+		if(firstTime){
 	        pbVideo.setVisibility(View.VISIBLE);
 		}
 		if(!firstTime & !hasFinished & fullScreen){
@@ -1142,8 +1282,22 @@ public class LODEActivity extends Activity implements OnClickListener,
 			isFromTimeline = true;
 			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
 		}
+		else if(parent.getId() == R.id.lvBookmarks){
+			try{
+				vidView.seekTo(calculateTime(bookmarkTimes.get(position)) * 1000);
+				if(!vidView.isPlaying()){
+					onClick(btnPlay);
+				}
+				onClick(btnBookmark);
+			}catch(IndexOutOfBoundsException e){
+				e.printStackTrace();
+			}
+		}
 		parent.setSelection(position);
-		sdTimeline.animateClose();
+		if(sdTimeline.isOpened()){
+			sdTimeline.animateClose();
+		}
+		
 	}
 	@Override
 	protected void onStart() {
@@ -1616,6 +1770,14 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		return time;
 	}
+	private int calculateTime(String time){
+		String[] hHmMsS = time.split(":");
+		int seconds = Integer.parseInt(hHmMsS[0]) * 3600;
+		seconds += Integer.parseInt(hHmMsS[1]) * 60;
+		seconds += Integer.parseInt(hHmMsS[2]);
+		Log.e("time", String.valueOf(TimeUnit.SECONDS.toMillis(seconds)));
+		return seconds;
+	}
 	@Override
 	public boolean onError(MediaPlayer mp, int what, int extra) {
 		//NEED TO RELEASE MEDIA PLAYER AND INSTANTIATE A NEW ONE.
@@ -1625,5 +1787,17 @@ public class LODEActivity extends Activity implements OnClickListener,
 	public int dp(int pixels){
 		//return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pixels , getResources().getDisplayMetrics());
 		return (int) (pixels / getResources().getDisplayMetrics().density + 0.5);
+	}
+	private void refreshIds(){
+		String[] projection = {BookmarksTable.COLUMN_ID};
+		Cursor cursor = getContentResolver().query(BookmarksContentProvider.CONTENT_URI, projection, null, null, null);
+		if (cursor != null) {
+			bookmarkIds.removeAll(bookmarkIds);
+			cursor.moveToFirst();
+			while(!cursor.isAfterLast()){
+				bookmarkIds.add(cursor.getString(cursor.getColumnIndex(BookmarksTable.COLUMN_ID)));
+				cursor.moveToNext();
+			}
+		}
 	}
 }
