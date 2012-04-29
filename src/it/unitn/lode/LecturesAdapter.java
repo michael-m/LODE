@@ -42,7 +42,7 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
                 
                 if(position == 0){
                 	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
-                        textViewTwo.setTextSize(13);
+                        textViewTwo.setTextSize(14);
                 	}
                 	else{
                         textViewTwo.setTextSize(15);
@@ -52,7 +52,7 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
                 }
                 else{
                 	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
-                        textViewTwo.setTextSize(12);
+                        textViewTwo.setTextSize(13);
                 	}
                 	else{
                         textViewTwo.setTextSize(14);

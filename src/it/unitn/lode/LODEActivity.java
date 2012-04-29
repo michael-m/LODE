@@ -77,9 +77,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 	OnItemClickListener, OnPreparedListener, OnLongClickListener, OnTouchListener, OnErrorListener, OnItemLongClickListener{
     /** Called when the activity is first created. */
 	private static int scrWidth, scrHeight;
-	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, FS = 7, VIDEO_LAYER = 8,
+	private final int VIDEO = 0, PLAY = 1, FF = 2, RR = 3, SLIDER = 4, SLIDE = 5, TITLE = 6, /*FS = 7,*/ VIDEO_LAYER = 8,
 			ZOOMIN = 9, ZOOMOUT = 10, LOCK = 11, BOOKMARK = 12, INFO = 13;
-	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null, rlBookmarks = null;
+	private RelativeLayout rlMain = null, rlMc = null, rlSlide = null, rlBottomBar = null, rlBookmarks = null, rlLectureInfo = null;
 	private RelativeLayout.LayoutParams rlMainParams = null;
 	private TextView tvTitle = null, tvSlidePos = null, tvTime = null;
 	public static VidView vidView = null;
@@ -87,7 +87,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private ImageButton btnF = null;
 	private ImageButton btnR = null;
 	private ImageButton btnPlay = null;
-	private ImageButton btnFullScreen = null;
+	//private ImageButton btnFullScreen = null;
 	private ImageButton btnZoomIn = null;
 	private ImageButton btnZoomOut = null;
 	private ImageButton btnLockInPlace = null;
@@ -151,19 +151,21 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private List<String> bookmarkIds = null;
 	private List<String> bookmarkTimes = null;
 	private ListView lvBookmarks = null;
-	static class ViewHolder{
-		TextView tvTime;
-	}
+	private TextView tvLectureInfo = null;
+	private boolean ziWasEnabled = false, zoWasEnabled = false;
+	private String lectureInfo = "";
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
-		lvBookmarks = (ListView) findViewById(R.id.lvBookmarks);
+    	tvLectureInfo = (TextView) findViewById(R.id.tvLectureInfo);
+    	tvLectureInfo.setVisibility(View.GONE);
+
+    	lvBookmarks = (ListView) findViewById(R.id.lvBookmarks);
 		
-		rlBookmarks = new RelativeLayout(this);
-		rlBookmarks.setBackgroundColor(android.R.color.transparent);
-		rlBookmarks.setGravity(Gravity.CENTER);
+		rlBookmarks = (RelativeLayout) findViewById(R.id.rlBookmarks);
+		rlLectureInfo = (RelativeLayout) findViewById(R.id.rlLectureInfo);
 
 		bookmarkIds = new ArrayList<String>();
 		bookmarkTimes = new ArrayList<String>();
@@ -263,6 +265,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		Bundle watchBundle = getIntent().getExtras();
         videoUrl = watchBundle.getString("videoUrl");
         lectureDataUrl = watchBundle.getString("lectureDataUrl");
+        lectureInfo = watchBundle.getString("LectureInfo");
         watchBundle = null;
         
 		fillData();
@@ -274,7 +277,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 
         //rlTimeline.setBackgroundResource(R.layout.timeline);
         
-        slideTitles = new ArrayList<String>();
+    	slideTitles = new ArrayList<String>();
         slideTempo = new ArrayList<Integer>();
         handler = new Handler();
         waitAndHide = new Runnable(){
@@ -357,10 +360,42 @@ public class LODEActivity extends Activity implements OnClickListener,
 							pbSlide.setVisibility(View.GONE);
 							rlSlide.bringToFront();
 							flTimeline.bringToFront();
+							if(lvBookmarks.getVisibility() == View.VISIBLE){
+								rlBookmarks.bringToFront();
+								lvBookmarks.bringToFront();
+								btnAddBookmark.bringToFront();
+								rlBottomBar.bringToFront();
+								if(btnZoomIn.isEnabled()){
+									ziWasEnabled = true;
+									btnZoomIn.setEnabled(false);
+								}
+								if(btnZoomOut.isEnabled()){
+									zoWasEnabled = true;
+									btnZoomOut.setEnabled(false);
+								}
+								btnLockInPlace.setEnabled(false);
+								btnInfo.setEnabled(false);
+							}
+							else if(tvLectureInfo.getVisibility() == View.VISIBLE){
+								rlLectureInfo.bringToFront();
+								tvLectureInfo.bringToFront();
+								rlBottomBar.bringToFront();
+								if(btnZoomIn.isEnabled()){
+									ziWasEnabled = true;
+									btnZoomIn.setEnabled(false);
+								}
+								if(btnZoomOut.isEnabled()){
+									zoWasEnabled = true;
+									btnZoomOut.setEnabled(false);
+								}
+								btnLockInPlace.setEnabled(false);
+								btnBookmark.setBackgroundResource(R.drawable.bookmark_disabled);
+								btnBookmark.setEnabled(false);
+							}
 							if(videoIsLarge){
 								vidView.bringToFront();
 								rlMc.bringToFront();
-								btnFullScreen.bringToFront();
+//								btnFullScreen.bringToFront();
 							}
 						}
 					}
@@ -401,6 +436,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlBottomBar = (RelativeLayout) findViewById(R.id.rlBottomBar);
         rlBottomBar.setBackgroundResource(android.R.drawable.bottom_bar);
         rlBottomBar.setGravity(Gravity.CENTER_VERTICAL);
+        rlBottomBar.setOnClickListener(this);
         
         rlSlide = (RelativeLayout) findViewById(R.id.rlSlide);
         rlSlide.setBackgroundColor(Color.TRANSPARENT);
@@ -522,9 +558,41 @@ public class LODEActivity extends Activity implements OnClickListener,
 						if(videoIsLarge){
 							vidView.bringToFront();
 							rlMc.bringToFront();
-							btnFullScreen.bringToFront();
+//							btnFullScreen.bringToFront();
 						}
 						flTimeline.bringToFront();
+						if(lvBookmarks.getVisibility() == View.VISIBLE){
+							rlBookmarks.bringToFront();
+							lvBookmarks.bringToFront();
+							btnAddBookmark.bringToFront();
+							rlBottomBar.bringToFront();
+							if(btnZoomIn.isEnabled()){
+								ziWasEnabled = true;
+								btnZoomIn.setEnabled(false);
+							}
+							if(btnZoomOut.isEnabled()){
+								zoWasEnabled = true;
+								btnZoomOut.setEnabled(false);
+							}
+							btnLockInPlace.setEnabled(false);
+							btnInfo.setEnabled(false);
+						}
+						else if(tvLectureInfo.getVisibility() == View.VISIBLE){
+							rlLectureInfo.bringToFront();
+							tvLectureInfo.bringToFront();
+							rlBottomBar.bringToFront();
+							if(btnZoomIn.isEnabled()){
+								ziWasEnabled = true;
+								btnZoomIn.setEnabled(false);
+							}
+							if(btnZoomOut.isEnabled()){
+								zoWasEnabled = true;
+								btnZoomOut.setEnabled(false);
+							}
+							btnLockInPlace.setEnabled(false);
+							btnBookmark.setBackgroundResource(R.drawable.bookmark_disabled);
+							btnBookmark.setEnabled(false);
+						}
 					}
 				}
 			});
@@ -559,7 +627,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnPlay = new ImageButton(this);
         btnF = new ImageButton(this);
         btnR = new ImageButton(this);
-        btnFullScreen = new ImageButton(this);
+//        btnFullScreen = new ImageButton(this);
         sbSlider = new SeekBar(this);
         pbVideo = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
         pbVideo.setVisibility(View.GONE);
@@ -589,14 +657,15 @@ public class LODEActivity extends Activity implements OnClickListener,
         
         btnInfo = new ImageButton(this);
         btnInfo.setId(INFO);
+        btnInfo.setOnClickListener(this);
         btnInfo.setBackgroundResource(android.R.drawable.ic_dialog_info);
 
 //        hideMc();
 
-        btnFullScreen.setOnClickListener(this);
-        btnFullScreen.setImageResource(R.drawable.fullscreen);
-        btnFullScreen.setId(FS);
-        btnFullScreen.setBackgroundColor(Color.TRANSPARENT);
+//        btnFullScreen.setOnClickListener(this);
+//        btnFullScreen.setImageResource(R.drawable.fullscreen);
+//        btnFullScreen.setId(FS);
+//        btnFullScreen.setBackgroundColor(Color.TRANSPARENT);
         
         btnPlay.setOnClickListener(this);
         btnPlay.setImageResource(android.R.drawable.ic_media_play);
@@ -766,24 +835,31 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
             rlMain.addView(pbSlide, rlMainParams);
 
-            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-            rlMainParams.topMargin = 0;
-            rlMainParams.leftMargin = 0;
-            rlMain.addView(btnFullScreen, rlMainParams);
+//            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+//            rlMainParams.topMargin = 0;
+//            rlMainParams.leftMargin = 0;
+//            rlMain.addView(btnFullScreen, rlMainParams);
         }
         else{
+        	tvLectureInfo.setTextColor(Color.BLACK);
+        	tvLectureInfo.setTextSize(15);
+        	tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
+        	LayoutParams tvLayoutParams = tvLectureInfo.getLayoutParams();
+        	tvLayoutParams.width = scrWidth / 3 + 50;
+        	tvLayoutParams.height = scrHeight / 3 + 50;
 
-            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, scrHeight / 3);
-            rlMain.removeView(lvBookmarks);
+        	rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, scrHeight  / 4);
+            rlBookmarks.removeView(lvBookmarks);
             rlBookmarks.addView(lvBookmarks, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-            rlMainParams.topMargin = scrHeight / 3;
+            rlMainParams.topMargin = scrHeight / 4;
             rlMainParams.leftMargin = scrWidth / 6;
-            rlMain.removeView(btnAddBookmark);
+            rlBookmarks.removeView(btnAddBookmark);
             rlBookmarks.addView(btnAddBookmark, rlMainParams);
 
-            rlMainParams = new RelativeLayout.LayoutParams(scrWidth / 2, scrWidth / 2);
+            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+            rlMain.removeView(rlBookmarks);
             rlMain.addView(rlBookmarks, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, (scrHeight * 15) / 24);
@@ -844,43 +920,28 @@ public class LODEActivity extends Activity implements OnClickListener,
 
             rlMainParams = new RelativeLayout.LayoutParams(85, 50);
             rlMainParams.topMargin = 10;
-            rlMainParams.leftMargin = 0;
+            rlMainParams.leftMargin = 70;
             rlBottomBar.addView(btnZoomOut, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(85, 50);
             rlMainParams.topMargin = 10;
-            rlMainParams.leftMargin = 100;
+            rlMainParams.leftMargin = 170;
             rlBottomBar.addView(btnZoomIn, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(40, 40);
             rlMainParams.topMargin = 12;
-            rlMainParams.leftMargin = 170;
+            rlMainParams.leftMargin = 240;
             rlBottomBar.addView(btnLockInPlace, rlMainParams);
-
-            
-            
-            
-            
-            
             
             rlMainParams = new RelativeLayout.LayoutParams(55, 55);
             rlMainParams.topMargin = 7;
-            rlMainParams.leftMargin = 230;
+            rlMainParams.leftMargin = 300;
             rlBottomBar.addView(btnBookmark, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(60, 60);
             rlMainParams.topMargin = 3;
             rlMainParams.leftMargin = scrWidth - 70;
             rlBottomBar.addView(btnInfo, rlMainParams);
-
-            
-            
-            
-            
-            
-            
-            
-            
             
             rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
             rlMainParams.topMargin = 0;
@@ -898,11 +959,21 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.leftMargin = ((scrHeight * 3) / 4 + scrHeight / 30) + ((scrWidth - scrHeight * 3 / 4) / 2) - 15;
             rlMain.addView(pbSlide, rlMainParams);
 
-            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
-            rlMainParams.topMargin = 0;
-            rlMainParams.leftMargin = 0;
-            rlMain.addView(btnFullScreen, rlMainParams);
+//            rlMainParams = new RelativeLayout.LayoutParams(50, 50);
+//            rlMainParams.topMargin = 0;
+//            rlMainParams.leftMargin = 0;
+//            rlMain.addView(btnFullScreen, rlMainParams);
         }
+		btnPlay.setEnabled(false);
+		btnF.setEnabled(false);
+		btnR.setEnabled(false);
+		sbSlider.setEnabled(false);
+//		btnFullScreen.setEnabled(false);
+		btnLockInPlace.setEnabled(false);
+		btnBookmark.setBackgroundResource(R.drawable.bookmark_disabled);
+		btnBookmark.setEnabled(false);
+		btnInfo.setEnabled(false);
+		sdTimeline.setEnabled(false);
 	}
 
 	
@@ -1034,6 +1105,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 			else{
 				rlSlide.bringToFront();
+				rlSlide.requestLayout();
+				rlSlide.invalidate();
 				vidView.requestLayout();
 				vidView.invalidate();
 				rlMc.requestLayout();
@@ -1041,23 +1114,24 @@ public class LODEActivity extends Activity implements OnClickListener,
 				flTimeline.bringToFront();
 			}
 		}
-		else if(view.getId() == FS){
-			fsIntent = new Intent(this, PlayInFullScreenActivity.class);
-			fsBundle = new Bundle();
-			fsBundle.putInt("CurrPos", vidView.getCurrentPosition());
-			fsBundle.putString("VideoURL", videoUrl);
-			fsIntent.putExtras(fsBundle);
-			btnPlay.setImageResource(android.R.drawable.ic_media_play);
-			playState = 0;
-			vidView.pause();
-			if(sliderThread != null){
-				dead = sliderThread;
-				sliderThread = null;
-				dead.interrupt();
-			}
-			fullScreen = true;
-			startActivity(fsIntent);
-		}
+//		else if(view.getId() == FS){
+//			fsIntent = new Intent(this, PlayInFullScreenActivity.class);
+//			fsBundle = new Bundle();
+//			fsBundle.putInt("CurrPos", vidView.getCurrentPosition());
+//			fsBundle.putString("VideoURL", videoUrl);
+//			fsIntent.putExtras(fsBundle);
+//			btnPlay.setImageResource(android.R.drawable.ic_media_play);
+//			playState = 0;
+//			vidView.pause();
+//			if(sliderThread != null){
+//				dead = sliderThread;
+//				sliderThread = null;
+//				dead.interrupt();
+//			}
+//			fullScreen = true;
+//			startActivity(fsIntent);
+//			growFullScreen();
+//		}
 		else if(view.getId() == VIDEO_LAYER || view.getId() == VIDEO){
 			if(sdTimeline.isOpened()){
 				sdTimeline.close();
@@ -1081,7 +1155,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 				vidView.bringToFront();
 				vidView.requestLayout();
 				vidView.invalidate();
-				btnFullScreen.bringToFront();
+//				btnFullScreen.bringToFront();
 				vidViewLayer.bringToFront();
 				pbVideo.bringToFront();
 				rlMc.bringToFront();
@@ -1135,11 +1209,71 @@ public class LODEActivity extends Activity implements OnClickListener,
 			}
 		}
 		else if(view.getId() == BOOKMARK){
-			lvBookmarks.setVisibility(lvBookmarks.getVisibility() == View.VISIBLE?View.GONE:View.VISIBLE);
-			btnAddBookmark.setVisibility(btnAddBookmark.getVisibility() == View.VISIBLE?View.GONE:View.VISIBLE);
-			rlBookmarks.bringToFront();
-			lvBookmarks.bringToFront();
-			btnAddBookmark.bringToFront();
+			if(btnAddBookmark.getVisibility() == View.GONE){
+				rlBookmarks.setBackgroundColor(Color.parseColor("#99999999"));
+				rlBookmarks.setOnClickListener(this);
+				lvBookmarks.setVisibility(View.VISIBLE);
+				btnAddBookmark.setVisibility(View.VISIBLE);
+				rlBookmarks.bringToFront();
+				lvBookmarks.bringToFront();
+				btnAddBookmark.bringToFront();
+				rlBottomBar.bringToFront();
+				if(btnZoomIn.isEnabled()){
+					ziWasEnabled = true;
+					btnZoomIn.setEnabled(false);
+				}
+				if(btnZoomOut.isEnabled()){
+					zoWasEnabled = true;
+					btnZoomOut.setEnabled(false);
+				}
+				btnLockInPlace.setEnabled(false);
+				btnInfo.setEnabled(false);
+			}
+			else{
+				rlBookmarks.setBackgroundColor(Color.TRANSPARENT);
+				rlBookmarks.setOnClickListener(null);
+				lvBookmarks.setVisibility(View.GONE);
+				btnAddBookmark.setVisibility(View.GONE);
+				bringLayoutsToFront();
+			}
+		}
+		else if(view.getId() == INFO){
+			if(tvLectureInfo.getVisibility() == View.GONE){
+				rlLectureInfo.setBackgroundColor(Color.parseColor("#99999999"));
+				rlLectureInfo.setOnClickListener(this);
+				rlLectureInfo.bringToFront();
+				tvLectureInfo.setVisibility(View.VISIBLE);
+				tvLectureInfo.bringToFront();
+				rlBottomBar.bringToFront();
+				if(btnZoomIn.isEnabled()){
+					ziWasEnabled = true;
+					btnZoomIn.setEnabled(false);
+				}
+				if(btnZoomOut.isEnabled()){
+					zoWasEnabled = true;
+					btnZoomOut.setEnabled(false);
+				}
+				btnLockInPlace.setEnabled(false);
+				btnBookmark.setBackgroundResource(R.drawable.bookmark_disabled);
+				btnBookmark.setEnabled(false);
+			}
+			else{
+				rlLectureInfo.setBackgroundColor(Color.TRANSPARENT);
+				rlLectureInfo.setOnClickListener(null);
+				tvLectureInfo.setVisibility(View.GONE);
+				bringLayoutsToFront();
+			}
+		}
+		else if(view.getId() == R.id.rlBottomBar){
+			if(sdTimeline.isOpened()){
+				sdTimeline.animateClose();
+			}
+			else{
+				rlBottomBar.bringToFront();
+				rlBottomBar.requestLayout();
+				rlBottomBar.invalidate();
+				flTimeline.bringToFront();
+			}
 		}
 	}
 	@Override
@@ -1197,7 +1331,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	public void hideMc(){
 		rlMc.setVisibility(View.GONE);
-		btnFullScreen.setVisibility(View.GONE);
+//		btnFullScreen.setVisibility(View.GONE);
 		btnPlay.setVisibility(View.INVISIBLE);
 		btnF.setVisibility(View.INVISIBLE);
 		btnR.setVisibility(View.INVISIBLE);
@@ -1205,7 +1339,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	public void showMc(){
 		rlMc.setVisibility(View.VISIBLE);
-		btnFullScreen.setVisibility(View.VISIBLE);
+//		btnFullScreen.setVisibility(View.VISIBLE);
 		btnPlay.setVisibility(View.VISIBLE);
 		btnF.setVisibility(View.VISIBLE);
 		btnR.setVisibility(View.VISIBLE);
@@ -1283,12 +1417,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
 		}
 		else if(parent.getId() == R.id.lvBookmarks){
+			onClick(btnBookmark);
+			onClick(vidViewLayer);
 			try{
 				vidView.seekTo(calculateTime(bookmarkTimes.get(position)) * 1000);
 				if(!vidView.isPlaying()){
 					onClick(btnPlay);
 				}
-				onClick(btnBookmark);
 			}catch(IndexOutOfBoundsException e){
 				e.printStackTrace();
 			}
@@ -1306,7 +1441,19 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	@Override
 	public void onPrepared(MediaPlayer mp) {
+		lectureInfo += "\nLength: " + convertToDuration(TimeUnit.MILLISECONDS.toSeconds(vidView.getDuration()));
+		tvLectureInfo.setText(lectureInfo);
 		pbVideo.setVisibility(View.INVISIBLE);
+		btnPlay.setEnabled(true);
+		btnF.setEnabled(true);
+		btnR.setEnabled(true);
+		sbSlider.setEnabled(true);
+//		btnFullScreen.setEnabled(true);
+		btnLockInPlace.setEnabled(true);
+		btnBookmark.setBackgroundResource(R.drawable.bookmark);
+		btnBookmark.setEnabled(true);
+		btnInfo.setEnabled(true);
+		sdTimeline.setEnabled(true);
 		onClick(btnPlay);
 	}
 	@Override
@@ -1314,6 +1461,12 @@ public class LODEActivity extends Activity implements OnClickListener,
 		keepCounting = false; 
 		if(sdTimeline.isOpened()){
 			sdTimeline.animateClose();
+		}
+		else if(lvBookmarks.getVisibility() == View.VISIBLE){
+			onClick(btnBookmark);
+		}
+		else if(tvLectureInfo.getVisibility() == View.VISIBLE){
+			onClick(btnInfo);
 		}
 		else{
 			LODEActivity.this.onClick(btnPlay);
@@ -1453,6 +1606,42 @@ public class LODEActivity extends Activity implements OnClickListener,
         ivSlides.setScaleType(ScaleType.FIT_XY);
 		flTimeline.bringToFront();
 	}
+	public void growFullScreen(){
+		if(sdTimeline.isOpened()){
+			sdTimeline.animateClose();
+		}
+		if(vidView.isPlaying()){
+			videoIsLarge = true;
+			LayoutParams vidParams = vidView.getLayoutParams();
+			vidParams.width = scrWidth;
+			vidParams.height = scrHeight;
+			vidView.setLayoutParams(vidParams);
+			vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+			vidView.requestLayout();
+			vidView.invalidate();
+
+			vidParams = vidViewLayer.getLayoutParams();
+			vidParams.width = scrWidth;
+			vidParams.height = scrHeight;
+			vidViewLayer.setLayoutParams(vidParams);
+			
+	        rlMainParams = new RelativeLayout.LayoutParams(scrWidth, 100);
+	        rlMc.setGravity(Gravity.CENTER);
+	        if(metrics.densityDpi == D_MEDIUM){
+	        	rlMc.setPadding(0, dp(13), 0, 0);
+	        }
+	        rlMainParams.topMargin = scrHeight - 60;
+	        rlMainParams.leftMargin = 0;
+	        rlMain.removeView(rlMc);
+	        rlMain.addView(rlMc, rlMainParams);
+
+	        rlMc.bringToFront();
+			vidView.bringToFront();
+			vidViewLayer.bringToFront();
+//	        btnFullScreen.bringToFront();
+			flTimeline.bringToFront();
+		}
+	}
 	public void shrinkSlide(){
 		ivSlides.setOnTouchListener(null);
 		isMediumSize = false;
@@ -1528,7 +1717,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	        rlMc.bringToFront();
 			vidView.bringToFront();
 			vidViewLayer.bringToFront();
-	        btnFullScreen.bringToFront();
+//	        btnFullScreen.bringToFront();
 			flTimeline.bringToFront();
 		}
 	}
@@ -1581,7 +1770,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         rlMain.addView(rlMc, rlMainParams);
 
         rlMc.bringToFront();
-        btnFullScreen.bringToFront();
+//        btnFullScreen.bringToFront();
 		flTimeline.bringToFront();
 	}
    /** Determine the space between the first two fingers */
@@ -1770,6 +1959,39 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		return time;
 	}
+	private String convertToDuration(long seconds){
+		long minutes = (seconds / 60) % 60;
+		long hours = seconds / 3600;
+		seconds = seconds % 60;
+		String time = "";
+		if(hours > 0){
+			if(hours == 1){
+				time = hours + " hour";
+			}
+			else{
+				time = hours + " hours";
+			}
+		}
+		if(minutes > 0){
+			if(hours > 0){
+				if(minutes == 1){
+					time += " and " + minutes + " minute";
+				}
+				else{
+					time+= " and " + minutes + " minutes";
+				}
+			}
+			else{
+				if(minutes == 1){
+					time += minutes + " minute";
+				}
+				else{
+					time+= minutes + " minutes";
+				}
+			}
+		}
+		return time;
+	}
 	private int calculateTime(String time){
 		String[] hHmMsS = time.split(":");
 		int seconds = Integer.parseInt(hHmMsS[0]) * 3600;
@@ -1799,5 +2021,32 @@ public class LODEActivity extends Activity implements OnClickListener,
 				cursor.moveToNext();
 			}
 		}
+	}
+	private void bringLayoutsToFront(){
+		vidView.bringToFront();
+		vidViewLayer.bringToFront();
+		vidView.requestLayout();
+		vidView.invalidate();
+		rlMc.bringToFront();
+		rlMc.requestLayout();
+		rlMc.invalidate();
+		if(ziWasEnabled){
+			ziWasEnabled = false;
+			btnZoomIn.setEnabled(true);
+		}
+		if(zoWasEnabled){
+			zoWasEnabled = false;
+			btnZoomOut.setEnabled(true);
+		}
+		btnLockInPlace.setEnabled(true);
+		btnBookmark.setBackgroundResource(R.drawable.bookmark);
+		btnBookmark.setEnabled(true);
+		btnInfo.setEnabled(true);
+		rlBottomBar.bringToFront();
+		rlBottomBar.requestLayout();
+		rlBottomBar.invalidate();
+		rlSlide.bringToFront();
+		ivSlides.bringToFront();
+		flTimeline.bringToFront();
 	}
 }

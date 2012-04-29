@@ -4,5 +4,12 @@
     android:id="@+id/rlCE"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:gravity="center">
+	android:gravity="center"
+	android:background="#99999999">
+	<RelativeLayout 
+	    android:id="@+id/rlCEChild"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:gravity="center"
+	/>
 </RelativeLayout>

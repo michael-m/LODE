@@ -33,6 +33,8 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         tabHost = getTabHost();
         tabHost.setOnTabChangedListener(this);
         TabHost.TabSpec spec;
+        TabHost.TabSpec spec1;
+        TabHost.TabSpec spec2;
 
         Intent intent = new Intent().setClass(this, LODEclActivity.class);
         Intent intent1 = new Intent().setClass(this, LODEDownloadsActivity.class);
@@ -59,17 +61,14 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         tv2.setGravity(Gravity.CENTER);
         tv2.setBackgroundResource(R.drawable.tab_normal);
 
-        spec = tabHost.newTabSpec("Lectures").setIndicator(tv)
-        		.setContent(intent);
+        spec = tabHost.newTabSpec("Lectures").setIndicator(tv).setContent(intent);
         tabHost.addTab(spec);
 
-        spec = tabHost.newTabSpec("Downloads").setIndicator(tv2)
-        		.setContent(intent1);
-        tabHost.addTab(spec);
+        spec1 = tabHost.newTabSpec("Downloads").setIndicator(tv2).setContent(intent1);
+        tabHost.addTab(spec1);
 
-        spec = tabHost.newTabSpec("Settings").setIndicator(tv1)
-        		.setContent(intent2);
-        tabHost.addTab(spec);
+        spec2 = tabHost.newTabSpec("Settings").setIndicator(tv1).setContent(intent2);
+        tabHost.addTab(spec2);
         
         LinearLayout llTabs = (LinearLayout) findViewById(R.id.llTabs);
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((scrWidth * 3) /4, 30);

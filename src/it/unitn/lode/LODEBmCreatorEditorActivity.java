@@ -1,13 +1,10 @@
 package it.unitn.lode;
 
-import java.util.concurrent.TimeUnit;
-
 import it.unitn.lode.contentprovider.BookmarksContentProvider;
 import it.unitn.lode.data.db.BookmarksTable;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -19,12 +16,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class LODEBmCreatorEditorActivity extends Activity {
 	private EditText etNote = null;
-	private TextView tvTime = null;
 	private Button btnAddBookmark = null;
 	private Uri bookmarksUri = null;
 	private RelativeLayout rlCE = null, rlCEChild = null;
@@ -45,10 +40,9 @@ public class LODEBmCreatorEditorActivity extends Activity {
         setContentView(R.layout.create_edit_bm);
 
 		rlCE = (RelativeLayout) findViewById(R.id.rlCE);
-		rlCEChild = new RelativeLayout(this);
+		rlCEChild = (RelativeLayout) findViewById(R.id.rlCEChild);
 		
 		etNote = new EditText(this);
-		tvTime = new TextView(this);
 		btnAddBookmark = new Button(this);
 		btnAddBookmark.setText("Add Bookmark");
 		btnAddBookmark.setOnClickListener(new OnClickListener() {
@@ -63,21 +57,19 @@ public class LODEBmCreatorEditorActivity extends Activity {
 				}
 			}
 		});
-		rlCEParams = new RelativeLayout.LayoutParams(200, 70);
-		tvTime.setBackgroundResource(R.layout.corners);
-		tvTime.setTextColor(Color.BLACK);
-		tvTime.setText("2:41");
-		rlCEChild.addView(tvTime, rlCEParams);
-		rlCEParams = new RelativeLayout.LayoutParams(scrWidth / 2, 70);
-		rlCEParams.topMargin = 100;
-		rlCEChild.addView(etNote, rlCEParams);
+		etNote.setWidth((scrHeight * 5) / 6);
+		etNote.setHeight(scrHeight / 4);
 		rlCEParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-		rlCEParams.topMargin = 200;
+		rlCEChild.addView(etNote, rlCEParams);
+
+		rlCEParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+		rlCEParams.topMargin = scrHeight / 4;
+		rlCEParams.leftMargin = scrWidth / 6;
 		rlCEChild.addView(btnAddBookmark, rlCEParams);
-		rlCEParams = new RelativeLayout.LayoutParams(scrWidth / 2, scrHeight);
-		rlCEParams.topMargin = 100;
-		rlCEParams.leftMargin = 100;
-		rlCE.addView(rlCEChild, rlCEParams);
+
+//        rlCEParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+//        rlCE.removeView(rlCEChild);
+//		rlCE.addView(rlCEChild, rlCEParams);
 
 		extras = getIntent().getExtras();
 
@@ -92,11 +84,10 @@ public class LODEBmCreatorEditorActivity extends Activity {
 		}
 	}
 	private void fillData(Uri uri) {
-		String[] projection = {BookmarksTable.COLUMN_NOTE,	BookmarksTable.COLUMN_TIME};
+		String[] projection = {BookmarksTable.COLUMN_NOTE};
 		Cursor cursor = getContentResolver().query(uri, projection, null, null,	null);
 		if (cursor != null) {
 			cursor.moveToFirst();
-			tvTime.setText(cursor.getString(cursor.getColumnIndexOrThrow(BookmarksTable.COLUMN_TIME)));
 			etNote.setText(cursor.getString(cursor.getColumnIndexOrThrow(BookmarksTable.COLUMN_NOTE)));
 			//Close the cursor
 			cursor.close();

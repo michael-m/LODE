@@ -68,20 +68,41 @@
 				android:divider="@android:color/darker_gray"
 				android:dividerHeight="1.0sp"/>
 		</RelativeLayout>
-	<ListView
-		android:id="@+id/lvBookmarks"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:background="@layout/lecture_info"
-		android:fadingEdge="none"
-		android:cacheColorHint="#00000000"
-		android:divider="@android:color/darker_gray"
-		android:dividerHeight="1.0sp"
-		android:descendantFocusability="blocksDescendants"
-		android:visibility="gone"/>
-	<Button 
-	    android:id="@+id/btnAddBookmark"
-	    android:text="Add Bookmark"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"/>
+	<RelativeLayout 
+	    android:id="@+id/rlBookmarks"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:gravity="center"
+	    android:background="@android:color/transparent">
+		<ListView
+			android:id="@+id/lvBookmarks"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:background="@layout/lecture_info"
+			android:fadingEdge="none"
+			android:cacheColorHint="#00000000"
+			android:divider="@android:color/darker_gray"
+			android:dividerHeight="1.0sp"
+			android:descendantFocusability="blocksDescendants"
+			android:visibility="gone"/>
+		<Button 
+		    android:id="@+id/btnAddBookmark"
+	    	android:text="Add Bookmark"
+	    	android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"/>
+	</RelativeLayout>
+	<RelativeLayout 
+	    android:id="@+id/rlLectureInfo"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:gravity="center"
+	    android:background="@android:color/transparent">
+		<TextView 
+		    android:id="@+id/tvLectureInfo"
+		    android:background="@layout/lecture_info"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:paddingLeft="40dp"
+		    android:gravity="left|center_vertical"/>
+	</RelativeLayout>
 </RelativeLayout>

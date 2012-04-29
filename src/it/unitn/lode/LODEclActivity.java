@@ -53,8 +53,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private TextView tvCourse = null;
 	private Courses selectedCourse = null;
 	private TextView tvItem = null;
-	private final int LV_COURSES = 0;
-	private final int LV_LECTURES = 1;
+	private final int LV_COURSES = 100;
+	private final int LV_LECTURES = 101;
 	private int currPos = 0;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
@@ -404,12 +404,15 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			btnWatch.setTag(R.id.lectureDataUrl, baseUrl + cl.get(currPos).get(position - 1).getFolderl());
 			rlLIContainer.setVisibility(View.VISIBLE);
 			rlLIContainer.bringToFront();
+			lvCourses.setEnabled(false);
+			lvLectures.setEnabled(false);
 		}
 	}
 	@Override
 	public void onBackPressed() {
 		if(rlLIContainer.getVisibility() == View.VISIBLE){
 			rlLIContainer.setVisibility(View.GONE);
+			lvCourses.setEnabled(true);
 			lvLectures.setEnabled(true);
 		}
 		else{
@@ -441,10 +444,14 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			Bundle bundle = new Bundle();
 			bundle.putString("videoUrl",videoUrl);
 			bundle.putString("lectureDataUrl", lectureDataUrl);
+			bundle.putString("LectureInfo", tvLectureInfo.getText().toString());
 			Intent intent = new Intent(this, LODEActivity.class);
 			rlLIContainer.setVisibility(View.GONE);
+			lvCourses.setEnabled(true);
+			lvLectures.setEnabled(true);
 			intent.putExtras(bundle);
 			startActivity(intent);
 		}
 	}
+	
 }
