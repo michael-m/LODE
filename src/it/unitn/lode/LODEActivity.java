@@ -720,12 +720,33 @@ public class LODEActivity extends Activity implements OnClickListener,
 //        rlMain.addView(tvTitle, rlMainParams);
 //
         if(metrics.densityDpi == D_MEDIUM){
-            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+//        	tvLectureInfo.setTextColor(Color.BLACK);
+//        	tvLectureInfo.setTextSize(15);
+//        	tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
+        	LayoutParams tvLayoutParams = tvLectureInfo.getLayoutParams();
+        	tvLayoutParams.width = scrWidth / 3 + 100;
+        	tvLayoutParams.height = scrHeight / 3 + 100;
+
+        	rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, scrHeight  / 4);
+            rlBookmarks.removeView(lvBookmarks);
+            rlBookmarks.addView(lvBookmarks, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+            rlMainParams.topMargin = scrHeight / 4;
+            rlMainParams.leftMargin = scrWidth / 6;
+            rlBookmarks.removeView(btnAddBookmark);
+            rlBookmarks.addView(btnAddBookmark, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+            rlMain.removeView(rlBookmarks);
+            rlMain.addView(rlBookmarks, rlMainParams);
+
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4));
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 0;
             rlMain.addView(vidView, rlMainParams);
 
-            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4));
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 0;
             rlMain.addView(vidViewLayer, rlMainParams);
@@ -757,7 +778,7 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMc.addView(tvTime, rlMainParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp(50));
-            rlMainParams.topMargin = dp((scrWidth * 2 - 75)/ 4);
+            rlMainParams.topMargin = dp((scrWidth * 2 - 225)/ 4);
             rlMainParams.leftMargin = 0;
             rlMain.removeView(rlMc);
             rlMain.addView(rlMc, rlMainParams);
@@ -787,14 +808,7 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.topMargin = dp(15);
             rlMainParams.leftMargin = dp(130);
             rlBottomBar.addView(btnLockInPlace, rlMainParams);
-            
-            
-            
-            
-            
-            
-            
-            
+
             rlMainParams = new RelativeLayout.LayoutParams(0, 0);
             rlMainParams.width = LayoutParams.WRAP_CONTENT;
             rlMainParams.height = LayoutParams.WRAP_CONTENT;
@@ -802,6 +816,12 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams.leftMargin = 230;
             rlBottomBar.addView(btnBookmark, rlMainParams);
 
+            
+            
+            
+            
+            
+            
             rlMainParams = new RelativeLayout.LayoutParams(0, 0);
             rlMainParams.width = LayoutParams.WRAP_CONTENT;
             rlMainParams.height = LayoutParams.WRAP_CONTENT;
@@ -819,13 +839,13 @@ public class LODEActivity extends Activity implements OnClickListener,
             
             
 
-            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4) + dp(50));
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
             rlMain.removeView(rlSlide);
             rlMain.addView(rlSlide, rlMainParams);
 
-            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4) + dp(50));
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 0;
             rlSlide.addView(ivSlides, rlMainParams);
@@ -845,8 +865,8 @@ public class LODEActivity extends Activity implements OnClickListener,
         	tvLectureInfo.setTextSize(15);
         	tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
         	LayoutParams tvLayoutParams = tvLectureInfo.getLayoutParams();
-        	tvLayoutParams.width = scrWidth / 3 + 50;
-        	tvLayoutParams.height = scrHeight / 3 + 50;
+        	tvLayoutParams.width = scrWidth / 3 + 100;
+        	tvLayoutParams.height = scrHeight / 3 + 100;
 
         	rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 5) / 6, scrHeight  / 4);
             rlBookmarks.removeView(lvBookmarks);
@@ -987,7 +1007,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
 		if(resultCode == Activity.RESULT_OK){
-			refreshIds();
+			refreshBookmarks();
 		}
 		super.onActivityResult(requestCode, resultCode, intent);
 	}
@@ -995,7 +1015,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		String[] projection = {BookmarksTable.COLUMN_ID, BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME};
 		String selection = BookmarksTable.COLUMN_LECTURE_ID + "=?";
 		String[] selectionArgs = {lectureDataUrl};
-		String sortOrder = BookmarksTable.COLUMN_TIME;
+		String sortOrder = null;//BookmarksTable.COLUMN_TIME;
 		Cursor cursor = getContentResolver().query(BookmarksContentProvider.CONTENT_URI, projection, selection, selectionArgs,
 				sortOrder);
 		if (cursor != null) {
@@ -1409,9 +1429,10 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	@Override
 	public void onDrawerOpened() {
+		flTimeline.bringToFront();
 	}
 	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id){
 		if(parent.getId() == R.id.lvTimeline){
 			isFromTimeline = true;
 			sbSlider.setProgress(slideTempo.get(position - 1) * 1000);
@@ -1579,6 +1600,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 			btnF.bringToFront();
 			btnR.bringToFront();
 			sbSlider.bringToFront();
+			vidView.requestLayout();
+			vidView.invalidate();
 		}
 		return false;
 	}
@@ -1651,15 +1674,15 @@ public class LODEActivity extends Activity implements OnClickListener,
 		slideIsLarge = false;
 
 		if(metrics.densityDpi == D_MEDIUM){
-	        rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
-	        rlMainParams.topMargin = 0;
-	        rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
-	        rlMain.removeView(rlSlide);
-	        rlMain.addView(rlSlide, rlMainParams);
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4) + dp(50));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
+            rlMain.removeView(rlSlide);
+            rlMain.addView(rlSlide, rlMainParams);
 
-	        rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 75)/ 4));
-	        rlMainParams.topMargin = 0;
-	        rlMainParams.leftMargin = 0;
+            rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4) + dp(50));
+            rlMainParams.topMargin = 0;
+            rlMainParams.leftMargin = 0;
 		}
 		else{
 			rlMainParams = new RelativeLayout.LayoutParams(scrWidth - (scrHeight * 5) / 6, ((scrHeight * 15) / 24) + 70);
@@ -1691,29 +1714,49 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		if(vidView.isPlaying()){
 			videoIsLarge = true;
-			LayoutParams vidParams = vidView.getLayoutParams();
-			vidParams.width = (scrWidth * 3) / 4;
-			vidParams.height = scrHeight;
-			vidView.setLayoutParams(vidParams);
-			vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
-			vidView.requestLayout();
-			vidView.invalidate();
-
-			vidParams = vidViewLayer.getLayoutParams();
-			vidParams.width = (scrWidth * 3) / 4;
-			vidParams.height = scrHeight;
-			vidViewLayer.setLayoutParams(vidParams);
-			
-	        rlMainParams = new RelativeLayout.LayoutParams((scrWidth * 3) / 4, 70);
-	        rlMc.setGravity(Gravity.CENTER);
 	        if(metrics.densityDpi == D_MEDIUM){
-	        	rlMc.setPadding(0, dp(13), 0, 0);
-	        }
-	        rlMainParams.topMargin = scrHeight - 60;
-	        rlMainParams.leftMargin = 0;
-	        rlMain.removeView(rlMc);
-	        rlMain.addView(rlMc, rlMainParams);
+				LayoutParams vidParams = vidView.getLayoutParams();
+				vidParams.width = dp((scrHeight * 4) / 3);
+				vidParams.height = dp(scrHeight);
+				vidView.setLayoutParams(vidParams);
+				vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+				vidView.requestLayout();
+				vidView.invalidate();
 
+				vidParams = vidViewLayer.getLayoutParams();
+				vidParams.width = dp((scrHeight * 4) / 3);
+				vidParams.height = dp(scrHeight);
+				vidViewLayer.setLayoutParams(vidParams);
+				
+		        rlMainParams = new RelativeLayout.LayoutParams(dp((scrHeight * 4) / 3), dp(70));
+		        rlMc.setGravity(Gravity.CENTER);
+	        	rlMc.setPadding(0, dp(13), 0, 0);
+		        rlMainParams.topMargin = dp(scrHeight - 60);
+		        rlMainParams.leftMargin = 0;
+		        rlMain.removeView(rlMc);
+		        rlMain.addView(rlMc, rlMainParams);
+	        }
+	        else{
+				LayoutParams vidParams = vidView.getLayoutParams();
+				vidParams.width = (scrHeight * 4) / 3;
+				vidParams.height = scrHeight;
+				vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
+				vidView.setLayoutParams(vidParams);
+				vidView.requestLayout();
+				vidView.invalidate();
+
+				vidParams = vidViewLayer.getLayoutParams();
+				vidParams.width = (scrHeight * 4) / 3;
+				vidParams.height = scrHeight;
+				vidViewLayer.setLayoutParams(vidParams);
+				
+		        rlMainParams = new RelativeLayout.LayoutParams((scrHeight * 4) / 3, 70);
+		        rlMc.setGravity(Gravity.CENTER);
+		        rlMainParams.topMargin = scrHeight - 60;
+		        rlMainParams.leftMargin = 0;
+		        rlMain.removeView(rlMc);
+		        rlMain.addView(rlMc, rlMainParams);
+	        }
 	        rlMc.bringToFront();
 			vidView.bringToFront();
 			vidViewLayer.bringToFront();
@@ -1729,20 +1772,20 @@ public class LODEActivity extends Activity implements OnClickListener,
         if(metrics.densityDpi == D_MEDIUM){
     		LayoutParams vidParams = vidView.getLayoutParams();
     		vidParams.width = dp((scrWidth * 2) / 3 - 75);
-    		vidParams.height = dp((scrWidth * 2 - 75)/ 4);
+    		vidParams.height = dp((scrWidth * 2 - 225)/ 4);
     		vidView.setLayoutParams(vidParams);
     		vidView.getHolder().setFixedSize(vidParams.width, vidParams.height);
     		vidView.requestLayout();
     		vidView.invalidate();
     		vidView.bringToFront();
 
-    		vidParams = vidViewLayer.getLayoutParams();
+            vidParams = vidViewLayer.getLayoutParams();
     		vidParams.width = dp((scrWidth * 2) / 3 - 75);
-    		vidParams.height = dp((scrWidth * 2 - 75)/ 4);
+    		vidParams.height = dp((scrWidth * 2 - 225)/ 4);
     		vidViewLayer.setLayoutParams(vidParams);
 
             rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 75), dp(50));
-            rlMainParams.topMargin = dp((scrWidth * 2 - 75)/ 4);
+            rlMainParams.topMargin = dp((scrWidth * 2 - 225)/ 4);
             rlMainParams.leftMargin = 0;
         	rlMc.setPadding(0, dp(5), 0, 0);
         }
@@ -2010,14 +2053,16 @@ public class LODEActivity extends Activity implements OnClickListener,
 		//return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, pixels , getResources().getDisplayMetrics());
 		return (int) (pixels / getResources().getDisplayMetrics().density + 0.5);
 	}
-	private void refreshIds(){
-		String[] projection = {BookmarksTable.COLUMN_ID};
+	private void refreshBookmarks(){
+		String[] projection = {BookmarksTable.COLUMN_ID, BookmarksTable.COLUMN_TIME};
 		Cursor cursor = getContentResolver().query(BookmarksContentProvider.CONTENT_URI, projection, null, null, null);
 		if (cursor != null) {
 			bookmarkIds.removeAll(bookmarkIds);
+			bookmarkTimes.removeAll(bookmarkTimes);
 			cursor.moveToFirst();
 			while(!cursor.isAfterLast()){
 				bookmarkIds.add(cursor.getString(cursor.getColumnIndex(BookmarksTable.COLUMN_ID)));
+				bookmarkTimes.add(cursor.getString(cursor.getColumnIndex(BookmarksTable.COLUMN_TIME)));
 				cursor.moveToNext();
 			}
 		}

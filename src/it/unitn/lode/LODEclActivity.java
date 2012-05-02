@@ -3,7 +3,15 @@ package it.unitn.lode;
 import it.unitn.lode.data.Courses;
 import it.unitn.lode.data.Lectures;
 import it.unitn.lode.data.LodeSaxDataParser;
+import it.unitn.lode.data.TimedSlides;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -11,15 +19,19 @@ import java.util.Map;
 import java.util.TreeMap;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -31,6 +43,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class LODEclActivity extends Activity implements OnItemClickListener, OnClickListener{
 	private LodeSaxDataParser lecturesParser = null;
@@ -65,8 +78,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private ProgressBar pbCL = null;
 	private DisplayMetrics metrics = null;
 	public static int scrWidth, scrHeight;
-
-	
 	private RelativeLayout rlLectureInfo = null;
 	private RelativeLayout rlLIContainer = null;
 	private RelativeLayout rlButtons = null;
@@ -74,7 +85,13 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private RelativeLayout.LayoutParams rlLIParams = null;
 	private Typeface tfApplegaramound = null;
 	private final int WATCH = 0, DOWNLOAD = 1, INFO = 2;
-	
+	private LectureDownloader lectureDownloader = null;
+	private ProgressDialog dProgressDialog = null;
+	private String lectureDir = "";
+	private LodeSaxDataParser tsParser = null;
+	private List<TimedSlides> ts = null;
+	private boolean downloadCancelled = false;
+	private final String SD_CARD = Environment.getExternalStorageDirectory().toString();
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -83,9 +100,34 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	    getWindowManager().getDefaultDisplay().getMetrics(metrics);
         scrWidth = metrics.widthPixels;
         scrHeight = metrics.heightPixels;
-
-        
+       
 /******* LECTURE INFO AND OPTIONS LAYOUT ******/
+        // instantiate it within the onCreate method
+        dProgressDialog = new ProgressDialog(LODEclActivity.this);
+        dProgressDialog.setButton(ProgressDialog.BUTTON_POSITIVE, "Pause", new DialogInterface.OnClickListener(){
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				downloadCancelled = false;
+				lectureDownloader.cancel(true);
+		        makeToast("Download has been paused.");
+			}
+		});
+        dProgressDialog.setButton(ProgressDialog.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener(){
+			
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				downloadCancelled = true;
+				lectureDownloader.cancel(true);
+		        makeToast("Download has been cancelled.");
+			}
+		});
+        dProgressDialog.setCancelable(false);
+        dProgressDialog.setCanceledOnTouchOutside(false);
+        dProgressDialog.setMessage("Downloading lecture");
+        dProgressDialog.setIndeterminate(false);
+        dProgressDialog.setMax(100);
+        dProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        
         rlLIContainer = new RelativeLayout(this);
         rlLIContainer.setBackgroundColor(Color.TRANSPARENT);
         rlLIContainer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -402,6 +444,22 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 								+ cl.get(currPos).get(position - 1).getDocentel());
 			btnWatch.setTag(R.id.videoUrl, cl.get(currPos).get(position - 1).getUrllez());
 			btnWatch.setTag(R.id.lectureDataUrl, baseUrl + cl.get(currPos).get(position - 1).getFolderl());
+			lectureDir = cl.get(currPos).get(position - 1).getFolderl();
+
+			boolean[] availability = checkStorageAvailability();
+			if(availability[0]){
+				if(availability[1]){
+					btnDownload.setEnabled(true);
+				}
+				else{
+					btnDownload.setEnabled(false);
+					makeToast("External Storage is write-protected.");
+				}
+			}
+			else{
+				btnDownload.setEnabled(false);
+				makeToast("External storage is not present.");
+			}
 			rlLIContainer.setVisibility(View.VISIBLE);
 			rlLIContainer.bringToFront();
 			lvCourses.setEnabled(false);
@@ -452,6 +510,220 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			intent.putExtras(bundle);
 			startActivity(intent);
 		}
+		else if(v.getId() == DOWNLOAD){
+			lectureDownloader = new LectureDownloader();
+			lectureDownloader.execute(baseUrl + lectureDir);
+		}
 	}
-	
+	private class LectureDownloader extends AsyncTask<String, Integer, String>{
+		String status = "Determining download size ...";
+	    @Override
+	    protected void onPreExecute() {
+	        super.onPreExecute();
+	    	handler.post(new Runnable() {
+				@Override
+				public void run() {
+					dProgressDialog.setMessage(status);
+					dProgressDialog.setProgress(0);
+					dProgressDialog.setSecondaryProgress(0);
+				}
+			});
+	        dProgressDialog.show();
+	    }
+	    @Override
+	    protected String doInBackground(String... sUrl) {
+	    	List<URL> urls = new ArrayList<URL>();
+	    	File downloadCheck = new File(SD_CARD + "/lode/"  + lectureDir + "/lecture.downloaded");
+	    	if(downloadCheck.exists()){
+	    		handler.post(new Runnable() {
+					@Override
+					public void run() {
+			    		makeToast("Lecture has already been downloaded.");
+					}
+				});
+	    	}
+	    	else{
+		        try {
+		            // create a File object for the parent directory
+		            File lectureDirectory = new File(SD_CARD + "/lode/"  + lectureDir + "/");
+		            File slidesDirectory = new File(SD_CARD	+ "/lode/"  + lectureDir + "/img");
+	            	urls.add(new URL(sUrl[0] + "/LECTURE.XML"));
+	            	urls.add(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
+	            	
+			        tsParser = new LodeSaxDataParser(sUrl[0] + "/TIMED_SLIDES.XML");
+					try{
+						ts = new ArrayList<TimedSlides>();
+				        ts = tsParser.parseSlides();
+				        Iterator<TimedSlides> tsIterator = ts.iterator();
+				        while(tsIterator.hasNext()){
+				        	String imageUrl = tsIterator.next().getImmagine();
+				        	urls.add(new URL(sUrl[0] +"/" + imageUrl));
+				        }
+					}catch(RuntimeException e){
+			            handler.post(new Runnable(){
+							@Override
+							public void run() {
+								alertWrongData.show();
+							}
+						});
+					}
+		            // have the object build the directory structure, if needed.
+		            lectureDirectory.mkdirs();
+		            slidesDirectory.mkdirs();
+
+		            Iterator<URL> urlIterator = urls.iterator();
+		            File outputFile = null;
+		            FileOutputStream output = null;
+		            int fileLength = 0, lectureLength = 0;
+		            long total = 0, lectureTotal = 0;
+					while(urlIterator.hasNext()){
+						if(!isCancelled()){
+			            	Log.e("Download", "not cancelled.");
+							URL nextUrl = urlIterator.next();
+				            URLConnection connection = nextUrl.openConnection();
+				            connection.connect();
+//				            // this will be useful so that you can show a typical 0-100% progress bar
+				            lectureLength += connection.getContentLength();
+						}
+						else{
+			            	Log.e("Download", "Cancelled.");
+			            	break;
+						}
+					}
+					urlIterator = urls.iterator();
+					while(urlIterator.hasNext()){
+						if(!isCancelled()){
+							URL nextUrl = urlIterator.next();
+				            URLConnection connection = nextUrl.openConnection();
+				            connection.connect();
+//				            // this will be useful so that you can show a typical 0-100% progress bar
+				            fileLength = connection.getContentLength();
+//				            // download the file
+				            InputStream input = new BufferedInputStream(nextUrl.openStream());
+				            String fileName = nextUrl.toString().replace(sUrl[0], "");
+				            if(fileName.contains("/img")){
+				            	fileName = fileName.replace("/img", "");
+					            outputFile = new File(slidesDirectory, fileName);
+				            }
+				            else{
+				            	outputFile = new File(lectureDirectory, fileName);
+				            }
+				            if(!outputFile.exists()){
+					            status = "Downloading " + fileName.replace("/", "");
+//					            // now attach the OutputStream to the file object, instead of a String representation
+					            output = new FileOutputStream(outputFile);
+					            byte data[] = new byte[1024];
+					            total = 0;
+					            int count;
+					            while ((count = input.read(data)) != -1){
+					            	total += count;
+//					                // publishing the progress....
+					            	output.write(data, 0, count);
+					            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+					            }
+					            lectureTotal += total;
+					            output.flush();
+					            output.close();
+					            input.close();
+				            }
+				            else{
+					            status = fileName.replace("/", "") + " already exists.";
+				            	total = outputFile.length();
+				            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+				            	lectureTotal += total;
+				            }
+			            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+						}
+						else{
+							break;
+						}
+					}
+		            //Write FLAG to indicate lecture has been already been downloaded or there is no request for cancel.
+		            if(!isCancelled()){
+		            	Log.e("Download", "Not cancelled");
+			            outputFile = new File(lectureDirectory, "lecture.downloaded");
+			            output = new FileOutputStream(outputFile);
+			            OutputStreamWriter downloadCheckWriter = new OutputStreamWriter(output);
+			            downloadCheckWriter.write("Lecture has been successfully downloaded.");
+			            downloadCheckWriter.flush();
+			            downloadCheckWriter.close();
+			            output.flush();
+			            output.close();
+		            }
+		            else{
+		            	final File deleteDir = lectureDirectory;
+		            	if(downloadCancelled){
+			            	Log.e("delete Dir", lectureDirectory.toString());
+		            		Thread deleterThread = new Thread(){
+		            			@Override
+		            			public void run() {
+				            		deleteDirAndContents(deleteDir);
+		            			}
+		            		};
+		            		deleterThread.start();
+		            	}
+		            }
+		        } catch (Exception e) {
+			    	handler.post(new Runnable() {
+						
+						@Override
+						public void run() {
+				        	makeToast("Error downloading lecture.");
+						}
+					});
+		        }
+	    	}
+	        return null;
+	    }
+	    @Override
+	    protected void onProgressUpdate(Integer... progress) {
+	        super.onProgressUpdate(progress);
+	        dProgressDialog.setMessage(status);
+	        dProgressDialog.setProgress(progress[0]);
+	        dProgressDialog.setSecondaryProgress(progress[1]);
+	        //dProgressDialog.setSecondaryProgress(progress[1]);
+	    }
+	    @Override
+	    protected void onPostExecute(String result) {
+	    	super.onPostExecute(result);
+	    	handler.post(new Runnable() {
+				@Override
+				public void run() {
+					dProgressDialog.dismiss();
+					status = "Downloading lecture";
+					dProgressDialog.setMessage(status);
+				}
+			});
+	    }
+	}
+	private boolean[] checkStorageAvailability(){
+		boolean mExternalStorageAvailable = false;
+		boolean mExternalStorageWriteable = false;
+		String state = Environment.getExternalStorageState();
+
+		if (Environment.MEDIA_MOUNTED.equals(state)) {
+		    // We can read and write the media
+		    mExternalStorageAvailable = mExternalStorageWriteable = true;
+		} else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+		    // We can only read the media
+		    mExternalStorageAvailable = true;
+		    mExternalStorageWriteable = false;
+		} else {
+		    // Something else is wrong. It may be one of many other states, but all we need
+		    //  to know is we can neither read nor write
+		    mExternalStorageAvailable = mExternalStorageWriteable = false;
+		}
+		boolean[] availability = {mExternalStorageAvailable, mExternalStorageWriteable};
+		return availability;
+	}
+	private void makeToast(String message) {
+		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+	}
+	void deleteDirAndContents(File fileOrDirectory) {
+	    if (fileOrDirectory.isDirectory())
+	        for (File child : fileOrDirectory.listFiles()){
+	        	deleteDirAndContents(child);
+	        }
+	    fileOrDirectory.delete();
+	}
 }

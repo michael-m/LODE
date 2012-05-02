@@ -121,7 +121,7 @@ public class LODEBmCreatorEditorActivity extends Activity {
 			getContentResolver().update(bookmarksUri, values, null, null);
 		}
 	}
-	private void makeToast() {
+	private void makeToast(){
 		Toast.makeText(this, "Please add a note to your bookmark", Toast.LENGTH_LONG).show();
 	}
 }

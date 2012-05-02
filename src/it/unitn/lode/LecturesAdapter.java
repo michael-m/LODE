@@ -42,24 +42,25 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
                 
                 if(position == 0){
                 	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
-                        textViewTwo.setTextSize(14);
+                        textViewTwo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
                 	}
                 	else{
                         textViewTwo.setTextSize(15);
+                        textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD);
                 	}
-                    textViewTwo.setTypeface(tfApplegaramound, Typeface.BOLD);
                     textViewTwo.setGravity(Gravity.CENTER);
                 }
                 else{
                 	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
-                        textViewTwo.setTextSize(13);
+                        textViewTwo.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+                        textViewTwo.setPadding(10, 0, 0, 0);
                 	}
                 	else{
                         textViewTwo.setTextSize(14);
+                        textViewTwo.setTypeface(tfApplegaramound, Typeface.NORMAL);
+                        textViewTwo.setPadding(15, 5, 10, 5);
+                        textViewTwo.setGravity(Gravity.LEFT);
                 	}
-                    textViewTwo.setTypeface(tfApplegaramound, Typeface.NORMAL);
-                    textViewTwo.setPadding(15, 5, 10, 5);
-                    textViewTwo.setGravity(Gravity.LEFT);
                 }
             }
         }
