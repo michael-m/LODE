@@ -31,7 +31,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -68,10 +67,9 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private TextView tvItem = null;
 	private final int LV_COURSES = 100;
 	private final int LV_LECTURES = 101;
-	private int currPos = 0;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
-	private final String baseUrl = "http://latemar.science.unitn.it/itunes/feeds/";
+	private final String BASE_URL = "http://latemar.science.unitn.it/itunes/feeds/";
 	public static Context CL_CONTEXT;
 	private AlertDialog alertNetwork = null, alertExit = null, alertWrongData = null;
 	private boolean comingFromSettings = false;
@@ -92,6 +90,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private List<TimedSlides> ts = null;
 	private boolean downloadCancelled = false;
 	private final String SD_CARD = Environment.getExternalStorageDirectory().toString();
+	private boolean urlGoAhead = true;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -113,7 +112,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			}
 		});
         dProgressDialog.setButton(ProgressDialog.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener(){
-			
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				downloadCancelled = true;
@@ -174,9 +172,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         rlLIParams.topMargin = scrHeight / 2 - 80;
         rlLIContainer.addView(rlButtons, rlLIParams);
 /********** END ***********/        
-        
-        
-        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
@@ -249,9 +244,41 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         coursesPopulator = new Runnable() {
 			@Override
 			public void run() {
-				try{
-					coursesParser = new LodeSaxDataParser(baseUrl + "COURSES.XML");
-				}catch(RuntimeException e){
+		    	File coursesMetaDataDir = new File(SD_CARD + "/lode");
+		    	File coursesMetaData = new File(SD_CARD + "/lode/COURSES.XML");
+		    	if(!coursesMetaData.exists()){
+		    		try {
+		    			coursesMetaDataDir.mkdirs();
+						URL courseMetaDataUrl = new URL(BASE_URL + "COURSES.XML");
+			            FileOutputStream output = null;
+			            URLConnection connection = courseMetaDataUrl.openConnection();
+			            connection.connect();
+			            InputStream input = new BufferedInputStream(courseMetaDataUrl.openStream());
+			            output = new FileOutputStream(coursesMetaData);
+			            byte data[] = new byte[1024];
+			            int count = 0;
+			            while ((count = input.read(data)) != -1){
+			            	output.write(data, 0, count);
+			            }
+			            output.flush();
+			            output.close();
+			            input.close();
+						urlGoAhead = true;
+					} catch (Exception e) {
+			    		handler.post(new Runnable() {
+							@Override
+							public void run() {
+					    		makeToast("Error downloading course data.");
+							}
+						});
+						e.printStackTrace();
+						urlGoAhead = false;
+					}
+		    	}
+
+		    	try{
+					coursesParser = new LodeSaxDataParser(new URL(BASE_URL + "COURSES.XML"));
+				}catch(Exception e){
 		            handler.post(new Runnable(){
 						@Override
 						public void run() {
@@ -271,7 +298,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 				            tvCourse = new TextView(coursesContext);
 				        	tvCourse.setText("\nAvailable Courses");
 				        	courses.add(tvCourse);
-//				        	Log.e("Title: ", "Available Courses");
 					        while(csIterator.hasNext()){
 					        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
 					        	title = title.trim();
@@ -359,7 +385,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			if(rlLIContainer.getVisibility() == View.VISIBLE){
 				rlLIContainer.setVisibility(View.INVISIBLE);
 			}
-			currPos = position;
 			tvItem = (TextView) parent.getItemAtPosition(position);
 			
 			Iterator<Courses> selectedIterator = cs.iterator();
@@ -374,10 +399,10 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 						public void run() {
 							try{
 								if(cl.get(POSITION) == null){
-									String url = baseUrl + selectedCourse.getFolderc() + "/LECTURES.XML";
-									lecturesParser = new LodeSaxDataParser(url);
+									String url = BASE_URL + selectedCourse.getFolderc() + "/LECTURES.XML";
+									lecturesParser = new LodeSaxDataParser(new URL(url));
 								}
-							}catch(RuntimeException e){
+							}catch(Exception e){
 					            handler.post(new Runnable(){
 									@Override
 									public void run() {
@@ -405,10 +430,19 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 							        	lectures.add(tvItem);
 										
 								        while(lsIterator.hasNext()){
-								        	String lTitle = lsIterator.next().getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
+								        	Lectures nextLs = lsIterator.next();
+								        	String lTitle = nextLs.getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
 								        	lTitle = lTitle.trim();
 								            tvItem = new TextView(coursesContext);
 								        	tvItem.setText(lTitle);
+								        	tvItem.setTag(R.id.tvLectureDataUrl, BASE_URL + nextLs.getFolderl());
+								        	tvItem.setTag(R.id.tvVideoUrl, nextLs.getUrllez());
+								        	tvItem.setTag(R.id.tvLectureDir, nextLs.getFolderl());
+								        	tvItem.setTag(R.id.tvLectureInfoConcat,
+								        			"\nTopic: "	+ nextLs.getTitolol()
+								        			+ "\nDate: " + nextLs.getDatel()
+								        			+ "\nLecturer: " + nextLs.getDocentel());
+								        	tvItem.setTag(R.id.tvIdForBookmark, nextLs.getFolderl());
 								        	lectures.add(tvItem);
 								        }
 										pbCL.setVisibility(View.GONE);
@@ -439,12 +473,19 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			}
 		}
 		else if(parent.getId() == LV_LECTURES){
-			tvLectureInfo.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
-								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
-								+ cl.get(currPos).get(position - 1).getDocentel());
-			btnWatch.setTag(R.id.videoUrl, cl.get(currPos).get(position - 1).getUrllez());
-			btnWatch.setTag(R.id.lectureDataUrl, baseUrl + cl.get(currPos).get(position - 1).getFolderl());
-			lectureDir = cl.get(currPos).get(position - 1).getFolderl();
+			TextView tvLecture = (TextView) parent.getItemAtPosition(position);
+			tvLectureInfo.setText((String) tvLecture.getTag(R.id.tvLectureInfoConcat));
+			btnWatch.setTag(R.id.videoUrl, (String) tvLecture.getTag(R.id.tvVideoUrl));
+			btnWatch.setTag(R.id.lectureDataUrl, (String) tvLecture.getTag(R.id.tvLectureDataUrl));
+			btnWatch.setTag(R.id.IdForBookmark, (String) tvLecture.getTag(R.id.tvIdForBookmark));
+			btnDownload.setTag(R.id.lectureDir, (String) tvLecture.getTag(R.id.tvLectureDir));
+			lectureDir = (String) tvLecture.getTag(R.id.tvIdForBookmark);
+//			tvLectureInfo.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
+//								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
+//								+ cl.get(currPos).get(position - 1).getDocentel());
+//			btnWatch.setTag(R.id.videoUrl, cl.get(currPos).get(position - 1).getUrllez());
+//			btnWatch.setTag(R.id.lectureDataUrl, BASE_URL + cl.get(currPos).get(position - 1).getFolderl());
+//			lectureDir = cl.get(currPos).get(position - 1).getFolderl();
 
 			boolean[] availability = checkStorageAvailability();
 			if(availability[0]){
@@ -499,10 +540,13 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 		if(v.getId() == WATCH){
 			String videoUrl = (String) btnWatch.getTag(R.id.videoUrl);
 			String lectureDataUrl = (String) btnWatch.getTag(R.id.lectureDataUrl);
+			String idForBookmark = (String) btnWatch.getTag(R.id.IdForBookmark); 
 			Bundle bundle = new Bundle();
 			bundle.putString("videoUrl",videoUrl);
 			bundle.putString("lectureDataUrl", lectureDataUrl);
+			bundle.putString("idForBookmark", idForBookmark);
 			bundle.putString("LectureInfo", tvLectureInfo.getText().toString());
+			bundle.putBoolean("isLocal", false);
 			Intent intent = new Intent(this, LODEActivity.class);
 			rlLIContainer.setVisibility(View.GONE);
 			lvCourses.setEnabled(true);
@@ -512,7 +556,10 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 		}
 		else if(v.getId() == DOWNLOAD){
 			lectureDownloader = new LectureDownloader();
-			lectureDownloader.execute(baseUrl + lectureDir);
+			lectureDownloader.execute(BASE_URL + lectureDir);
+			rlLIContainer.setVisibility(View.GONE);
+			lvCourses.setEnabled(true);
+			lvLectures.setEnabled(true);
 		}
 	}
 	private class LectureDownloader extends AsyncTask<String, Integer, String>{
@@ -531,147 +578,144 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	        dProgressDialog.show();
 	    }
 	    @Override
-	    protected String doInBackground(String... sUrl) {
-	    	List<URL> urls = new ArrayList<URL>();
-	    	File downloadCheck = new File(SD_CARD + "/lode/"  + lectureDir + "/lecture.downloaded");
-	    	if(downloadCheck.exists()){
-	    		handler.post(new Runnable() {
-					@Override
-					public void run() {
-			    		makeToast("Lecture has already been downloaded.");
-					}
-				});
-	    	}
-	    	else{
-		        try {
-		            // create a File object for the parent directory
-		            File lectureDirectory = new File(SD_CARD + "/lode/"  + lectureDir + "/");
-		            File slidesDirectory = new File(SD_CARD	+ "/lode/"  + lectureDir + "/img");
-	            	urls.add(new URL(sUrl[0] + "/LECTURE.XML"));
-	            	urls.add(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
-	            	
-			        tsParser = new LodeSaxDataParser(sUrl[0] + "/TIMED_SLIDES.XML");
-					try{
-						ts = new ArrayList<TimedSlides>();
-				        ts = tsParser.parseSlides();
-				        Iterator<TimedSlides> tsIterator = ts.iterator();
-				        while(tsIterator.hasNext()){
-				        	String imageUrl = tsIterator.next().getImmagine();
-				        	urls.add(new URL(sUrl[0] +"/" + imageUrl));
-				        }
-					}catch(RuntimeException e){
-			            handler.post(new Runnable(){
-							@Override
-							public void run() {
-								alertWrongData.show();
-							}
-						});
-					}
-		            // have the object build the directory structure, if needed.
-		            lectureDirectory.mkdirs();
-		            slidesDirectory.mkdirs();
-
-		            Iterator<URL> urlIterator = urls.iterator();
-		            File outputFile = null;
-		            FileOutputStream output = null;
-		            int fileLength = 0, lectureLength = 0;
-		            long total = 0, lectureTotal = 0;
-					while(urlIterator.hasNext()){
-						if(!isCancelled()){
-			            	Log.e("Download", "not cancelled.");
-							URL nextUrl = urlIterator.next();
-				            URLConnection connection = nextUrl.openConnection();
-				            connection.connect();
-//				            // this will be useful so that you can show a typical 0-100% progress bar
-				            lectureLength += connection.getContentLength();
-						}
-						else{
-			            	Log.e("Download", "Cancelled.");
-			            	break;
-						}
-					}
-					urlIterator = urls.iterator();
-					while(urlIterator.hasNext()){
-						if(!isCancelled()){
-							URL nextUrl = urlIterator.next();
-				            URLConnection connection = nextUrl.openConnection();
-				            connection.connect();
-//				            // this will be useful so that you can show a typical 0-100% progress bar
-				            fileLength = connection.getContentLength();
-//				            // download the file
-				            InputStream input = new BufferedInputStream(nextUrl.openStream());
-				            String fileName = nextUrl.toString().replace(sUrl[0], "");
-				            if(fileName.contains("/img")){
-				            	fileName = fileName.replace("/img", "");
-					            outputFile = new File(slidesDirectory, fileName);
-				            }
-				            else{
-				            	outputFile = new File(lectureDirectory, fileName);
-				            }
-				            if(!outputFile.exists()){
-					            status = "Downloading " + fileName.replace("/", "");
-//					            // now attach the OutputStream to the file object, instead of a String representation
-					            output = new FileOutputStream(outputFile);
-					            byte data[] = new byte[1024];
-					            total = 0;
-					            int count;
-					            while ((count = input.read(data)) != -1){
-					            	total += count;
-//					                // publishing the progress....
-					            	output.write(data, 0, count);
-					            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
-					            }
-					            lectureTotal += total;
-					            output.flush();
-					            output.close();
-					            input.close();
-				            }
-				            else{
-					            status = fileName.replace("/", "") + " already exists.";
-				            	total = outputFile.length();
-				            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
-				            	lectureTotal += total;
-				            }
-			            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
-						}
-						else{
-							break;
-						}
-					}
-		            //Write FLAG to indicate lecture has been already been downloaded or there is no request for cancel.
-		            if(!isCancelled()){
-		            	Log.e("Download", "Not cancelled");
-			            outputFile = new File(lectureDirectory, "lecture.downloaded");
-			            output = new FileOutputStream(outputFile);
-			            OutputStreamWriter downloadCheckWriter = new OutputStreamWriter(output);
-			            downloadCheckWriter.write("Lecture has been successfully downloaded.");
-			            downloadCheckWriter.flush();
-			            downloadCheckWriter.close();
-			            output.flush();
-			            output.close();
-		            }
-		            else{
-		            	final File deleteDir = lectureDirectory;
-		            	if(downloadCancelled){
-			            	Log.e("delete Dir", lectureDirectory.toString());
-		            		Thread deleterThread = new Thread(){
-		            			@Override
-		            			public void run() {
-				            		deleteDirAndContents(deleteDir);
-		            			}
-		            		};
-		            		deleterThread.start();
-		            	}
-		            }
-		        } catch (Exception e) {
-			    	handler.post(new Runnable() {
-						
+	    protected String doInBackground(String... sUrl){
+	    	if(urlGoAhead){
+		    	List<URL> urls = new ArrayList<URL>();
+		    	File downloadCheck = new File(SD_CARD + "/lode/"  + lectureDir + "/lecture.downloaded");
+		    	if(downloadCheck.exists()){
+		    		handler.post(new Runnable() {
 						@Override
 						public void run() {
-				        	makeToast("Error downloading lecture.");
+				    		makeToast("Lecture has already been downloaded.");
 						}
 					});
-		        }
+		    	}
+		    	else{
+			        try {
+			            // create a File object for the parent directory
+			            File lectureDirectory = new File(SD_CARD + "/lode/"  + lectureDir + "/");
+			            File slidesDirectory = new File(SD_CARD	+ "/lode/"  + lectureDir + "/img");
+		            	urls.add(new URL(sUrl[0] + "/LECTURE.XML"));
+		            	urls.add(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
+		            	
+				        tsParser = new LodeSaxDataParser(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
+						try{
+							ts = new ArrayList<TimedSlides>();
+					        ts = tsParser.parseSlides();
+					        Iterator<TimedSlides> tsIterator = ts.iterator();
+					        while(tsIterator.hasNext()){
+					        	String imageUrl = tsIterator.next().getImmagine();
+					        	urls.add(new URL(sUrl[0] +"/" + imageUrl));
+					        }
+						}catch(RuntimeException e){
+				            handler.post(new Runnable(){
+								@Override
+								public void run() {
+									alertWrongData.show();
+								}
+							});
+						}
+			            // have the object build the directory structure, if needed.
+			            lectureDirectory.mkdirs();
+			            slidesDirectory.mkdirs();
+
+			            Iterator<URL> urlIterator = urls.iterator();
+			            File outputFile = null;
+			            FileOutputStream output = null;
+			            int fileLength = 0, lectureLength = 0;
+			            long total = 0, lectureTotal = 0;
+						while(urlIterator.hasNext()){
+							if(!isCancelled()){
+								URL nextUrl = urlIterator.next();
+					            URLConnection connection = nextUrl.openConnection();
+					            connection.connect();
+//					            // this will be useful so that you can show a typical 0-100% progress bar
+					            lectureLength += connection.getContentLength();
+							}
+							else{
+				            	break;
+							}
+						}
+						urlIterator = urls.iterator();
+						while(urlIterator.hasNext()){
+							if(!isCancelled()){
+								URL nextUrl = urlIterator.next();
+					            URLConnection connection = nextUrl.openConnection();
+					            connection.connect();
+//					            // this will be useful so that you can show a typical 0-100% progress bar
+					            fileLength = connection.getContentLength();
+//					            // download the file
+					            InputStream input = new BufferedInputStream(nextUrl.openStream());
+					            String fileName = nextUrl.toString().replace(sUrl[0], "");
+					            if(fileName.contains("/img")){
+					            	fileName = fileName.replace("/img", "");
+						            outputFile = new File(slidesDirectory, fileName);
+					            }
+					            else{
+					            	outputFile = new File(lectureDirectory, fileName);
+					            }
+					            if(!outputFile.exists()){
+						            status = "Downloading " + fileName.replace("/", "");
+//						            // now attach the OutputStream to the file object, instead of a String representation
+						            output = new FileOutputStream(outputFile);
+						            byte data[] = new byte[1024];
+						            total = 0;
+						            int count;
+						            while ((count = input.read(data)) != -1){
+						            	total += count;
+//						                // publishing the progress....
+						            	output.write(data, 0, count);
+						            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+						            }
+						            lectureTotal += total;
+						            output.flush();
+						            output.close();
+						            input.close();
+					            }
+					            else{
+						            status = fileName.replace("/", "") + " already exists.";
+					            	total = outputFile.length();
+					            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+					            	lectureTotal += total;
+					            }
+				            	publishProgress((int) ((lectureTotal * 100) / lectureLength), (int) ((total * 100) / fileLength));
+							}
+							else{
+								break;
+							}
+						}
+			            //Write FLAG to indicate lecture has been already been downloaded or there is no request for cancel.
+			            if(!isCancelled()){
+				            outputFile = new File(lectureDirectory, "lecture.downloaded");
+				            output = new FileOutputStream(outputFile);
+				            OutputStreamWriter downloadCheckWriter = new OutputStreamWriter(output);
+				            downloadCheckWriter.write("Lecture has been successfully downloaded.");
+				            downloadCheckWriter.flush();
+				            downloadCheckWriter.close();
+				            output.flush();
+				            output.close();
+			            }
+			            else{
+			            	final File deleteDir = lectureDirectory;
+			            	if(downloadCancelled){
+			            		Thread deleterThread = new Thread(){
+			            			@Override
+			            			public void run() {
+					            		deleteDirAndContents(deleteDir);
+			            			}
+			            		};
+			            		deleterThread.start();
+			            	}
+			            }
+			        } catch (Exception e) {
+				    	handler.post(new Runnable() {
+							@Override
+							public void run() {
+					        	makeToast("Error downloading lecture.");
+							}
+						});
+			        }
+		    	}
 	    	}
 	        return null;
 	    }

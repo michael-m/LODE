@@ -20,7 +20,7 @@ public class LODESettingsActivity extends Activity implements OnClickListener, O
 	private RelativeLayout.LayoutParams rlLecturesParams = null;
 	private EditText etAddressBar = null;
 	private Display devDisplay = null;
-	private int scrWidth, scrHeight;
+	private int scrWidth;
 	private Typeface tfApplegaramound = null;
 	private boolean firstTime = true;
 	private ImageButton btnSearch = null;
@@ -31,7 +31,6 @@ public class LODESettingsActivity extends Activity implements OnClickListener, O
 
         devDisplay = getWindowManager().getDefaultDisplay();
         scrWidth = devDisplay.getWidth();
-        scrHeight = devDisplay.getHeight();
 
         tfApplegaramound = Typeface.createFromAsset(getAssets(), "fonts/Applegaramound.ttf");
         

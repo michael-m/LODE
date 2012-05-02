@@ -9,10 +9,9 @@ import android.view.Display;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TabHost;
-import android.widget.TabHost.OnTabChangeListener;
 import android.widget.TextView;
 
-public class LODETabsActivity extends TabActivity implements OnTabChangeListener {
+public class LODETabsActivity extends TabActivity{
 	private TabHost tabHost = null;
 	private Typeface tfApplegaramound = null;
 	private Display devDisplay = null;
@@ -31,7 +30,6 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
 
         tfApplegaramound = Typeface.createFromAsset(getAssets(), "fonts/Applegaramound.ttf");
         tabHost = getTabHost();
-        tabHost.setOnTabChangedListener(this);
         TabHost.TabSpec spec;
         TabHost.TabSpec spec1;
         TabHost.TabSpec spec2;
@@ -74,8 +72,5 @@ public class LODETabsActivity extends TabActivity implements OnTabChangeListener
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((scrWidth * 3) /4, 30);
         tabParams.gravity = Gravity.CENTER;
         llTabs.setLayoutParams(tabParams);
-	}
-	@Override
-	public void onTabChanged(String tabId) {
 	}
 }

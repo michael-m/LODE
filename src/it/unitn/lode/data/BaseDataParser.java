@@ -1,9 +1,13 @@
 package it.unitn.lode.data;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.io.InputStreamReader;
 import java.net.URL;
+import org.xml.sax.InputSource;
+import android.util.Xml;
 
 public abstract class BaseDataParser implements DataParser {
     // names of the XML tags
@@ -27,14 +31,13 @@ public abstract class BaseDataParser implements DataParser {
     protected static final String DOCENTEL = "DOCENTEL";
     protected static final String TITOLOL = "TITOLOL";
     
-    final URL url;
-
-    protected BaseDataParser(String url){
-        try {
-        	this.url = new URL(url);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
+    URL url = null;
+    String sUrl = null;
+    protected BaseDataParser(URL url){
+       	this.url = url;
+    }
+    protected BaseDataParser(String sUrl){
+    	this.sUrl = sUrl;
     }
     protected InputStream getInputStream() {
         try {
@@ -42,5 +45,15 @@ public abstract class BaseDataParser implements DataParser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+    protected InputSource getLocalStream() {
+    	try {
+			InputSource localSource = new InputSource(new InputStreamReader(new FileInputStream(sUrl)));
+			localSource.setEncoding(Xml.Encoding.UTF_8.toString());
+			return localSource;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+            throw new RuntimeException(e);
+		}
     }
 }

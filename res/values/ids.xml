@@ -2,4 +2,12 @@
 <resources>
     <item type="id" name="lectureDataUrl"/>
     <item type="id" name="videoUrl"/>
+    <item type="id" name="lectureDir"/>
+    <item type="id" name="deleteDir"/>
+    <item type="id" name="IdForBookmark"/>
+    <item type="id" name="tvLectureDataUrl"/>
+    <item type="id" name="tvVideoUrl"/>
+    <item type="id" name="tvLectureDir"/>
+    <item type="id" name="tvLectureInfoConcat"/>
+    <item type="id" name="tvIdForBookmark"/>
 </resources>

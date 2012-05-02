@@ -1,17 +1,25 @@
 package it.unitn.lode.data;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import org.xml.sax.XMLReader;
 import android.sax.Element;
 import android.sax.EndElementListener;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
+import android.util.Log;
 import android.util.Xml;
 
 public class LodeSaxDataParser extends BaseDataParser {
-
-	public LodeSaxDataParser(String url) {
+	private boolean local;
+	public LodeSaxDataParser(String url, boolean local) {
+		super(url);
+		this.local = local;
+	}
+	public LodeSaxDataParser(URL url){
 		super(url);
 	}
 	@Override
@@ -41,16 +49,18 @@ public class LodeSaxDataParser extends BaseDataParser {
             }
         });
         try {
-            Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	if(local){
+        		SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+                SAXParser saxParser = parserFactory.newSAXParser();
+                XMLReader xmlReader = saxParser.getXMLReader();
+                xmlReader.setContentHandler(root.getContentHandler());
+                xmlReader.parse(this.getLocalStream());
+        	}
+        	else{
+        		Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	}
         } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        	root = new RootElement("lezione");
-//            try {
-//                Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
-//            }
-//            catch (Exception e1) {
-              throw new RuntimeException(e);
-//            }
+        	throw new RuntimeException(e);
         }
         return timedSlides;
 	}
@@ -86,7 +96,17 @@ public class LodeSaxDataParser extends BaseDataParser {
             }
         });
         try {
-            Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	if(local){
+    			Log.e("XML is:", "local");
+        		SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+                SAXParser saxParser = parserFactory.newSAXParser();
+                XMLReader xmlReader = saxParser.getXMLReader();
+                xmlReader.setContentHandler(root.getContentHandler());
+                xmlReader.parse(this.getLocalStream());
+        	}
+        	else{
+        		Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	}
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -134,7 +154,16 @@ public class LodeSaxDataParser extends BaseDataParser {
             }
         });
         try {
-            Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	if(local){
+        		SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+                SAXParser saxParser = parserFactory.newSAXParser();
+                XMLReader xmlReader = saxParser.getXMLReader();
+                xmlReader.setContentHandler(root.getContentHandler());
+                xmlReader.parse(this.getLocalStream());
+        	}
+        	else{
+        		Xml.parse(this.getInputStream(), Xml.Encoding.UTF_8, root.getContentHandler());
+        	}
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

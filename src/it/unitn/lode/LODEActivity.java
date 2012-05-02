@@ -5,6 +5,7 @@ import it.unitn.lode.data.LodeSaxDataParser;
 import it.unitn.lode.data.TimedSlides;
 import it.unitn.lode.data.db.BookmarksTable;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -21,6 +22,7 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -43,12 +45,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.ContextMenu;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
@@ -100,7 +100,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false, activityFirstRun = true;
 	public static boolean hasFinished = false;
 	private Handler handler = null;
-	private Runnable waitAndHide = null, timeUpdater = null;
+	private Runnable timeUpdater = null;
 	private Runnable sliderUpdater = null, listPopulator = null, slideChanger = null;
 	private Thread timeUpdaterThread = null, dead = null, sliderThread = null, slideChangerThread = null, slideGetterThread = null,
 			closestSetterThread = null;
@@ -110,8 +110,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private ListView lvTimeline = null;
 	//private RelativeLayout rlTimeline = null;
 	private ArrayList<TextView> slidePos = null;
-	private Intent fsIntent = null;
-	private Bundle fsBundle = null;
 	private ProgressBar pbVideo = null, pbSlide = null;
 	private Iterator<TimedSlides> tsIterator = null, tsSlideIterator = null;
 	private LodeSaxDataParser tsParser = null;
@@ -152,8 +150,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private List<String> bookmarkTimes = null;
 	private ListView lvBookmarks = null;
 	private TextView tvLectureInfo = null;
-	private boolean ziWasEnabled = false, zoWasEnabled = false;
-	private String lectureInfo = "";
+	private boolean ziWasEnabled = false, zoWasEnabled = false, isLocal;
+	private String lectureInfo;
+	private String idForBookmark;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -176,7 +175,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			public void onClick(View v) {
 				Intent i = new Intent(getApplicationContext(), LODEBmCreatorEditorActivity.class);
 				Bundle bundle = new Bundle();
-				bundle.putString("lectureId", lectureDataUrl);
+				bundle.putString("lectureId", idForBookmark);
 				bundle.putString("time", convertTime(TimeUnit.MILLISECONDS.toSeconds((vidView.getCurrentPosition()))));
 				i.putExtras(bundle);
 				startActivityForResult(i, ACTIVITY_CREATE);
@@ -265,7 +264,9 @@ public class LODEActivity extends Activity implements OnClickListener,
 		Bundle watchBundle = getIntent().getExtras();
         videoUrl = watchBundle.getString("videoUrl");
         lectureDataUrl = watchBundle.getString("lectureDataUrl");
+        idForBookmark = watchBundle.getString("idForBookmark");
         lectureInfo = watchBundle.getString("LectureInfo");
+        isLocal = watchBundle.getBoolean("isLocal");
         watchBundle = null;
         
 		fillData();
@@ -280,23 +281,23 @@ public class LODEActivity extends Activity implements OnClickListener,
     	slideTitles = new ArrayList<String>();
         slideTempo = new ArrayList<Integer>();
         handler = new Handler();
-        waitAndHide = new Runnable(){
-			@Override
-			public void run() {
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-//						hideMc();
-						isStarted = false;
-					}
-				});
-			}
-        };
+//        waitAndHide = new Runnable(){
+//			@Override
+//			public void run() {
+//				try {
+//					Thread.sleep(5000);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//				handler.post(new Runnable() {
+//					@Override
+//					public void run() {
+////						hideMc();
+//						isStarted = false;
+//					}
+//				});
+//			}
+//        };
         timeUpdater = new Runnable() {
         	String time = "";
         	@Override
@@ -478,8 +479,13 @@ public class LODEActivity extends Activity implements OnClickListener,
 			@Override
 			public void run() {
 				try{
-			        tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML");
-				}catch(RuntimeException e){
+					if(isLocal){
+						tsParser = new LodeSaxDataParser(lectureDataUrl + "/TIMED_SLIDES.XML", true);
+					}
+					else{
+						tsParser = new LodeSaxDataParser(new URL(lectureDataUrl + "/TIMED_SLIDES.XML"));
+					}
+				}catch(Exception e){
 		            handler.post(new Runnable(){
 						@Override
 						public void run() {
@@ -1014,7 +1020,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private void fillData() {
 		String[] projection = {BookmarksTable.COLUMN_ID, BookmarksTable.COLUMN_NOTE, BookmarksTable.COLUMN_TIME};
 		String selection = BookmarksTable.COLUMN_LECTURE_ID + "=?";
-		String[] selectionArgs = {lectureDataUrl};
+		String[] selectionArgs = {idForBookmark};
+//		String[] selectionArgs = {lectureDataUrl};
 		String sortOrder = null;//BookmarksTable.COLUMN_TIME;
 		Cursor cursor = getContentResolver().query(BookmarksContentProvider.CONTENT_URI, projection, selection, selectionArgs,
 				sortOrder);
@@ -1051,7 +1058,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			Uri bookmarkUri = Uri.parse(BookmarksContentProvider.CONTENT_URI + "/" + selectedId);
 			Bundle bundle = new Bundle();
 			bundle.putParcelable(BookmarksContentProvider.CONTENT_ITEM_TYPE, bookmarkUri);
-			bundle.putString("lectureId", lectureDataUrl);
+			bundle.putString("lectureId", idForBookmark);
 			bundle.putString("time", selectedTime);
 			i.putExtras(bundle);
 			startActivityForResult(i, ACTIVITY_EDIT);
@@ -1497,22 +1504,42 @@ public class LODEActivity extends Activity implements OnClickListener,
 	Drawable getSlide(String slideUrl){
 		Bitmap bitmap = null;
 		Drawable drSlide = null;
-	    try {
-		    URL thisUrl = new URL(slideUrl);
-		    HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
-		    conn.connect();
-		    InputStream input = conn.getInputStream();
-		    bitmap = BitmapFactory.decodeStream(input);
-		    drSlide = new BitmapDrawable(bitmap);
-		} catch (IOException e) {
-			e.printStackTrace();
-			handler.post(new Runnable() {
-				
-				@Override
-				public void run() {
-					alertNetwork.show();
-				}
-			});
+		if(isLocal){
+			Uri slideURI = Uri.parse("file://" + slideUrl);
+			ContentResolver cr = getContentResolver();
+			try {
+				InputStream in = cr.openInputStream(slideURI);
+	            BitmapFactory.Options options = new BitmapFactory.Options();
+	            bitmap = BitmapFactory.decodeStream(in,null,options);
+	            drSlide = new BitmapDrawable(bitmap);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				e.printStackTrace();
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						alertWrongData.show();
+					}
+				});
+			}
+		}
+		else{
+		    try {
+			    URL thisUrl = new URL(slideUrl);
+			    HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
+			    conn.connect();
+			    InputStream input = conn.getInputStream();
+			    bitmap = BitmapFactory.decodeStream(input);
+			    drSlide = new BitmapDrawable(bitmap);
+			} catch (IOException e) {
+				e.printStackTrace();
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						alertNetwork.show();
+					}
+				});
+			}
 		}
 	    return drSlide;
 	}

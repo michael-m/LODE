@@ -1,11 +1,9 @@
 package it.unitn.lode;
 
 import java.util.ArrayList;
-
 import android.content.Context;
 import android.graphics.Typeface;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;

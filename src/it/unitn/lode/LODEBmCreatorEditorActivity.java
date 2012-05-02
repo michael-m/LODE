@@ -22,7 +22,7 @@ public class LODEBmCreatorEditorActivity extends Activity {
 	private EditText etNote = null;
 	private Button btnAddBookmark = null;
 	private Uri bookmarksUri = null;
-	private RelativeLayout rlCE = null, rlCEChild = null;
+	private RelativeLayout rlCEChild = null;
 	private RelativeLayout.LayoutParams rlCEParams = null;
 	private DisplayMetrics metrics = null;
 	private static int scrWidth, scrHeight;
@@ -39,7 +39,6 @@ public class LODEBmCreatorEditorActivity extends Activity {
 
         setContentView(R.layout.create_edit_bm);
 
-		rlCE = (RelativeLayout) findViewById(R.id.rlCE);
 		rlCEChild = (RelativeLayout) findViewById(R.id.rlCEChild);
 		
 		etNote = new EditText(this);
