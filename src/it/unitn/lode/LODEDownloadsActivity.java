@@ -450,7 +450,10 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 										            tvItem = new TextView(coursesContext);
 										        	tvItem.setText(lTitle);
 										        	tvItem.setTag(R.id.tvLectureDataUrl, BASE_URL + nextLs.getFolderl());
-										        	tvItem.setTag(R.id.tvVideoUrl, nextLs.getUrllez());
+										        	int start = nextLs.getUrllez().lastIndexOf("/") + 1;
+										        	String videoName = nextLs.getUrllez().substring(start);
+									            	Log.e("videoUrl", BASE_URL + nextLs.getFolderl() + "/" + videoName);
+										        	tvItem.setTag(R.id.tvVideoUrl, BASE_URL + nextLs.getFolderl() + "/" + videoName);
 										        	tvItem.setTag(R.id.tvLectureDir, nextLs.getFolderl());
 										        	tvItem.setTag(R.id.tvLectureInfoConcat,
 										        			"\nTopic: "	+ nextLs.getTitolol()

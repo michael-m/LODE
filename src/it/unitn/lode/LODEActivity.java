@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -96,7 +97,6 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private SeekBar sbSlider = null;
 	private int playState = 0;
 	public static int currPos = 0;
-	private final int D_LOW = DisplayMetrics.DENSITY_LOW, D_MEDIUM = DisplayMetrics.DENSITY_MEDIUM, D_HIGH = DisplayMetrics.DENSITY_HIGH;
 	private boolean isStarted = false, firstTime = true, isResuming = false, fullScreen = false, activityFirstRun = true;
 	public static boolean hasFinished = false;
 	private Handler handler = null;
@@ -153,6 +153,14 @@ public class LODEActivity extends Activity implements OnClickListener,
 	private boolean ziWasEnabled = false, zoWasEnabled = false, isLocal;
 	private String lectureInfo;
 	private String idForBookmark;
+	private int SCR_LAYOUT;
+	private final int SCR_MASK = Configuration.SCREENLAYOUT_SIZE_MASK;
+	private final int SCR_NORMAL = Configuration.SCREENLAYOUT_SIZE_NORMAL;
+	private final int MEDIUM_DENSITY_PHONE = 999;
+	private final int MEDIUM_DENSITY_TABLET = 888;
+	private final int HIGH_DENSITY_PHONE = 777;
+	private final int HIGH_DENSITY_TABLET = 666;
+	private int THIS_DEVICE;
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -406,6 +414,8 @@ public class LODEActivity extends Activity implements OnClickListener,
 
         metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
+	    SCR_LAYOUT = getResources().getConfiguration().screenLayout;
+        THIS_DEVICE = getDeviceCategory();
         
         scrWidth = metrics.widthPixels;
         scrHeight = metrics.heightPixels;
@@ -414,18 +424,18 @@ public class LODEActivity extends Activity implements OnClickListener,
 //        Log.e("scrWidth:dp", String.valueOf(dp(scrWidth)));
 //        Log.e("scrHeight:dp", String.valueOf(dp(scrHeight)));
 //        Log.e("vidWidth",String.valueOf(dp(480 * 5 / 6)));
-        if(metrics.densityDpi == D_LOW){
-            Log.e("Density","LOW");
-        }
-        else if(metrics.densityDpi == D_MEDIUM){
-            Log.e("Density","MEDIUM");
-        }
-        else if(metrics.densityDpi == D_HIGH){
-            Log.e("Density","HIGH");
-        }
-        else{
-            Log.e("Density","X-HIGH");
-        }
+//        if(metrics.densityDpi == D_LOW){
+//            Log.e("Density","LOW");
+//        }
+//        else if(metrics.densityDpi == D_MEDIUM){
+//            Log.e("Density","MEDIUM");
+//        }
+//        else if(metrics.densityDpi == D_HIGH){
+//            Log.e("Density","HIGH");
+//        }
+//        else{
+//            Log.e("Density","X-HIGH");
+//        }
 
         rlMain = (RelativeLayout) findViewById(R.id.rlMain);
         rlMain.setBackgroundColor(Color.LTGRAY);
@@ -634,7 +644,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnF = new ImageButton(this);
         btnR = new ImageButton(this);
 //        btnFullScreen = new ImageButton(this);
-        sbSlider = new SeekBar(this);
+        sbSlider = (SeekBar) findViewById(R.id.sbSlider);
         pbVideo = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
         pbVideo.setVisibility(View.GONE);
         pbSlide = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
@@ -686,7 +696,7 @@ public class LODEActivity extends Activity implements OnClickListener,
         btnR.setId(RR);
         
         sbSlider.setId(SLIDER);
-        sbSlider.setThumbOffset(10);
+        sbSlider.setThumbOffset(8);
         sbSlider.setProgressDrawable(getResources().getDrawable(R.layout.progress_slider));
         sbSlider.setProgress(0);
         sbSlider.setOnSeekBarChangeListener(this);
@@ -725,7 +735,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 //        rlMainParams.leftMargin = 0;
 //        rlMain.addView(tvTitle, rlMainParams);
 //
-        if(metrics.densityDpi == D_MEDIUM){
+        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
 //        	tvLectureInfo.setTextColor(Color.BLACK);
 //        	tvLectureInfo.setTextSize(15);
 //        	tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
@@ -775,6 +785,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 
             rlMainParams = new RelativeLayout.LayoutParams(dp((scrWidth * 2) / 3 - 260) , dp(40));
             rlMainParams.leftMargin = dp(40) + dp(80);
+            rlMc.removeView(sbSlider);
             rlMc.addView(sbSlider, rlMainParams);
 
             tvTime.setTextSize(10);
@@ -921,6 +932,7 @@ public class LODEActivity extends Activity implements OnClickListener,
             rlMainParams = new RelativeLayout.LayoutParams(scrHeight * 3 / 4 - 220 , 50);
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = 155;
+            rlMc.removeView(sbSlider);
             rlMc.addView(sbSlider, rlMainParams);
 
             tvTime.setTextSize(12);
@@ -1677,7 +1689,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			
 	        rlMainParams = new RelativeLayout.LayoutParams(scrWidth, 100);
 	        rlMc.setGravity(Gravity.CENTER);
-	        if(metrics.densityDpi == D_MEDIUM){
+	        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
 	        	rlMc.setPadding(0, dp(13), 0, 0);
 	        }
 	        rlMainParams.topMargin = scrHeight - 60;
@@ -1700,7 +1712,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		slideIsLarge = false;
 
-		if(metrics.densityDpi == D_MEDIUM){
+        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
             rlMainParams = new RelativeLayout.LayoutParams(dp(scrWidth) - dp((scrWidth * 2) / 3 - 75), dp((scrWidth * 2 - 225)/ 4) + dp(50));
             rlMainParams.topMargin = 0;
             rlMainParams.leftMargin = dp((scrWidth * 2) / 3 - 75);
@@ -1741,7 +1753,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 		}
 		if(vidView.isPlaying()){
 			videoIsLarge = true;
-	        if(metrics.densityDpi == D_MEDIUM){
+	        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
 				LayoutParams vidParams = vidView.getLayoutParams();
 				vidParams.width = dp((scrHeight * 4) / 3);
 				vidParams.height = dp(scrHeight);
@@ -1796,7 +1808,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 			sdTimeline.animateClose();
 		}
         videoIsLarge = false;
-        if(metrics.densityDpi == D_MEDIUM){
+        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
     		LayoutParams vidParams = vidView.getLayoutParams();
     		vidParams.width = dp((scrWidth * 2) / 3 - 75);
     		vidParams.height = dp((scrWidth * 2 - 225)/ 4);
@@ -1941,7 +1953,7 @@ public class LODEActivity extends Activity implements OnClickListener,
 	}
 	private void growInMainLayout(){
 		rlSlide.setBackgroundResource(R.layout.no_stroke);
-		if(metrics.densityDpi == D_MEDIUM){
+        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
 	        rlMainParams = new RelativeLayout.LayoutParams(0, 0);
 			rlMainParams.width = dp(scrWidth);
 			rlMainParams.height = dp(scrHeight);
@@ -2120,5 +2132,21 @@ public class LODEActivity extends Activity implements OnClickListener,
 		rlSlide.bringToFront();
 		ivSlides.bringToFront();
 		flTimeline.bringToFront();
+	}
+	private int getDeviceCategory(){
+    	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+    		if((SCR_LAYOUT & SCR_MASK) == SCR_NORMAL){
+    			return MEDIUM_DENSITY_PHONE;
+    		}else{
+    			return MEDIUM_DENSITY_TABLET;
+    		}
+    	}
+    	else{
+    		if((SCR_LAYOUT & SCR_MASK) == SCR_NORMAL){
+    			return HIGH_DENSITY_PHONE;
+    		}else{
+    			return HIGH_DENSITY_TABLET;
+    		}
+    	}
 	}
 }

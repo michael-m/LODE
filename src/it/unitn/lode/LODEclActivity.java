@@ -23,6 +23,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
@@ -91,15 +92,26 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private boolean downloadCancelled = false;
 	private final String SD_CARD = Environment.getExternalStorageDirectory().toString();
 	private boolean urlGoAhead = true;
+	private String videoUrl;
+	private int SCR_LAYOUT;
+	private final int SCR_MASK = Configuration.SCREENLAYOUT_SIZE_MASK;
+	private final int SCR_NORMAL = Configuration.SCREENLAYOUT_SIZE_NORMAL;
+	private final int MEDIUM_DENSITY_PHONE = 999;
+	private final int MEDIUM_DENSITY_TABLET = 888;
+	private final int HIGH_DENSITY_PHONE = 777;
+	private final int HIGH_DENSITY_TABLET = 666;
+	private int THIS_DEVICE;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
         setContentView(R.layout.courses_lectures);
-	    metrics = new DisplayMetrics();
+        
+        metrics = new DisplayMetrics();
 	    getWindowManager().getDefaultDisplay().getMetrics(metrics);
+	    SCR_LAYOUT = getResources().getConfiguration().screenLayout;
+        THIS_DEVICE = getDeviceCategory();
         scrWidth = metrics.widthPixels;
         scrHeight = metrics.heightPixels;
-       
 /******* LECTURE INFO AND OPTIONS LAYOUT ******/
         // instantiate it within the onCreate method
         dProgressDialog = new ProgressDialog(LODEclActivity.this);
@@ -146,7 +158,15 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         btnDownload.setId(DOWNLOAD);
         tvLectureInfo.setId(INFO);
         tvLectureInfo.setTypeface(tfApplegaramound, Typeface.NORMAL);
-        tvLectureInfo.setTextSize(13);
+        if(THIS_DEVICE == MEDIUM_DENSITY_TABLET || THIS_DEVICE == HIGH_DENSITY_TABLET){
+            tvLectureInfo.setTextSize(17);
+        }
+        else if(THIS_DEVICE == HIGH_DENSITY_PHONE){
+            tvLectureInfo.setTextSize(15);
+        }
+        else{
+        	tvLectureInfo.setTextSize(13);
+        }
         tvLectureInfo.setTextColor(Color.BLACK);
         tvLectureInfo.setGravity(Gravity.CENTER_HORIZONTAL);
 
@@ -359,7 +379,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         lvLectures.setOnItemClickListener(this);
 
 /***** ADD VIEWS TO LAYOUTS ******/
-        if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
             rlCLParams = new RelativeLayout.LayoutParams(dp(scrWidth / 3), dp(scrHeight));
             rlCL.addView(lvCourses, rlCLParams);
             
@@ -480,12 +500,6 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			btnWatch.setTag(R.id.IdForBookmark, (String) tvLecture.getTag(R.id.tvIdForBookmark));
 			btnDownload.setTag(R.id.lectureDir, (String) tvLecture.getTag(R.id.tvLectureDir));
 			lectureDir = (String) tvLecture.getTag(R.id.tvIdForBookmark);
-//			tvLectureInfo.setText("\nTopic: " + cl.get(currPos).get(position - 1).getTitolol() + "\nDate: "
-//								+ cl.get(currPos).get(position - 1).getDatel() + "\nLecturer: "
-//								+ cl.get(currPos).get(position - 1).getDocentel());
-//			btnWatch.setTag(R.id.videoUrl, cl.get(currPos).get(position - 1).getUrllez());
-//			btnWatch.setTag(R.id.lectureDataUrl, BASE_URL + cl.get(currPos).get(position - 1).getFolderl());
-//			lectureDir = cl.get(currPos).get(position - 1).getFolderl();
 
 			boolean[] availability = checkStorageAvailability();
 			if(availability[0]){
@@ -555,6 +569,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			startActivity(intent);
 		}
 		else if(v.getId() == DOWNLOAD){
+			videoUrl = (String) btnWatch.getTag(R.id.videoUrl);
 			lectureDownloader = new LectureDownloader();
 			lectureDownloader.execute(BASE_URL + lectureDir);
 			rlLIContainer.setVisibility(View.GONE);
@@ -597,7 +612,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			            File slidesDirectory = new File(SD_CARD	+ "/lode/"  + lectureDir + "/img");
 		            	urls.add(new URL(sUrl[0] + "/LECTURE.XML"));
 		            	urls.add(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
-		            	
+		            	int start = videoUrl.lastIndexOf("/") + 1;
+		            	String videoName = videoUrl.substring(start);
 				        tsParser = new LodeSaxDataParser(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
 						try{
 							ts = new ArrayList<TimedSlides>();
@@ -635,6 +651,11 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 							else{
 				            	break;
 							}
+						}
+						if(!isCancelled()){
+							URLConnection connection = (new URL(videoUrl)).openConnection();
+							connection.connect();
+							lectureLength += connection.getContentLength();
 						}
 						urlIterator = urls.iterator();
 						while(urlIterator.hasNext()){
@@ -684,7 +705,60 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 								break;
 							}
 						}
-			            //Write FLAG to indicate lecture has been already been downloaded or there is no request for cancel.
+						if(!isCancelled()){
+							handler.post(new Runnable() {
+								@Override
+								public void run() {
+									dProgressDialog.getButton(ProgressDialog.BUTTON_POSITIVE).setEnabled(false);
+								}
+							});
+							URL vidUrl = new URL(videoUrl);
+				            URLConnection connection = vidUrl.openConnection();
+				            connection.connect();
+//				            // this will be useful so that you can show a typical 0-100% progress bar
+				            fileLength = connection.getContentLength();
+//				            // download the file
+				            InputStream input = new BufferedInputStream(vidUrl.openStream());
+			            	outputFile = new File(lectureDirectory, videoName);
+				            if(!outputFile.exists()){
+					            status = "Downloading " + videoName;
+//					            // now attach the OutputStream to the file object, instead of a String representation
+					            output = new FileOutputStream(outputFile);
+					            byte data[] = new byte[1024];
+					            total = 0;
+					            int count;
+					            while ((count = input.read(data)) != -1){
+					            	if(!isCancelled()){
+						            	total += count;
+						                // publishing the progress....
+						            	output.write(data, 0, count);
+						            	publishProgress((int) ((total * 100) / fileLength), (int) ((lectureTotal * 100) / lectureLength));
+					            	}
+					            	else{
+					            		outputFile.delete();
+					            		break;
+					            	}
+					            }
+					            lectureTotal += total;
+					            output.flush();
+					            output.close();
+					            input.close();
+					            handler.post(new Runnable() {
+									@Override
+									public void run() {
+										dProgressDialog.getButton(ProgressDialog.BUTTON_POSITIVE).setEnabled(true);
+									}
+								});
+				            }
+				            else{
+					            status = videoName + " already exists.";
+				            	total = outputFile.length();
+				            	publishProgress((int) ((total * 100) / fileLength), (int) ((lectureTotal * 100) / lectureLength));
+				            	lectureTotal += total;
+				            }
+			            	publishProgress((int) ((total * 100) / fileLength), (int) ((lectureTotal * 100) / lectureLength));
+						}
+						//Write FLAG to indicate lecture has been already been downloaded or there is no request for cancel.
 			            if(!isCancelled()){
 				            outputFile = new File(lectureDirectory, "lecture.downloaded");
 				            output = new FileOutputStream(outputFile);
@@ -763,11 +837,27 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private void makeToast(String message) {
 		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 	}
-	void deleteDirAndContents(File fileOrDirectory) {
+	private void deleteDirAndContents(File fileOrDirectory) {
 	    if (fileOrDirectory.isDirectory())
 	        for (File child : fileOrDirectory.listFiles()){
 	        	deleteDirAndContents(child);
 	        }
 	    fileOrDirectory.delete();
+	}
+	private int getDeviceCategory(){
+    	if(metrics.densityDpi == DisplayMetrics.DENSITY_MEDIUM){
+    		if((SCR_LAYOUT & SCR_MASK) == SCR_NORMAL){
+    			return MEDIUM_DENSITY_PHONE;
+    		}else{
+    			return MEDIUM_DENSITY_TABLET;
+    		}
+    	}
+    	else{
+    		if((SCR_LAYOUT & SCR_MASK) == SCR_NORMAL){
+    			return HIGH_DENSITY_PHONE;
+    		}else{
+    			return HIGH_DENSITY_TABLET;
+    		}
+    	}
 	}
 }

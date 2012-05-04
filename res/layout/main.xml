@@ -42,8 +42,13 @@
 		<RelativeLayout
 		    android:id="@+id/rlMc"
     		android:layout_width="wrap_content"
-    		android:layout_height="wrap_content"
-    		/>
+    		android:layout_height="wrap_content">
+    			<SeekBar
+    			    android:id="@+id/sbSlider"
+    			    android:layout_width="wrap_content"
+    			    android:layout_height="wrap_content"
+    			    android:maxHeight="1000dp"/>
+    	</RelativeLayout>
 		<RelativeLayout
 		    android:id="@+id/rlSlide"
     		android:layout_width="wrap_content"
@@ -99,6 +104,7 @@
 	    android:background="@android:color/transparent">
 		<TextView 
 		    android:id="@+id/tvLectureInfo"
+		    android:textColor="@android:color/black"
 		    android:background="@layout/lecture_info"
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
