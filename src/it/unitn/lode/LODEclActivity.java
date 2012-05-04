@@ -32,6 +32,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -47,21 +48,21 @@ import android.widget.Toast;
 
 public class LODEclActivity extends Activity implements OnItemClickListener, OnClickListener{
 	private LodeSaxDataParser lecturesParser = null;
-	private ListView lvCourses = null;
+	private static ListView lvCourses = null;
 	private ListView lvLectures = null;
-	private ArrayList<TextView> courses = null;
+	private static ArrayList<TextView> courses = null;
 	private ArrayList<TextView> lectures = null;
 	private RelativeLayout rlCL = null;
 	private RelativeLayout.LayoutParams rlCLParams = null;
 	private LodeSaxDataParser coursesParser = null;
-	private Runnable coursesPopulator = null;
+	private static Runnable coursesPopulator = null;
 	private Runnable lecturesPopulator = null;
 	private List<Courses> cs = null;
 	private List<Lectures> ls = null;
 	private Map<Integer, List<Lectures>> cl = null;
 	private Iterator<Courses> csIterator = null;
 	private Iterator<Lectures> lsIterator = null;
-	private Handler handler = null;
+	private static Handler handler = null;
 	private final Context coursesContext = this;
 	private TextView tvCourse = null;
 	private Courses selectedCourse = null;
@@ -75,7 +76,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private AlertDialog alertNetwork = null, alertExit = null, alertWrongData = null;
 	private boolean comingFromSettings = false;
 	private ProgressBar pbCL = null;
-	private DisplayMetrics metrics = null;
+	private static DisplayMetrics metrics = null;
 	public static int scrWidth, scrHeight;
 	private RelativeLayout rlLectureInfo = null;
 	private RelativeLayout rlLIContainer = null;
@@ -91,7 +92,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private List<TimedSlides> ts = null;
 	private boolean downloadCancelled = false;
 	private final String SD_CARD = Environment.getExternalStorageDirectory().toString();
-	private boolean urlGoAhead = true;
+	private boolean urlGoAhead = true, connectedJustNow = false;
+	private static boolean isConnCheckerSleeping = false;
 	private String videoUrl;
 	private int SCR_LAYOUT;
 	private final int SCR_MASK = Configuration.SCREENLAYOUT_SIZE_MASK;
@@ -101,6 +103,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private final int HIGH_DENSITY_PHONE = 777;
 	private final int HIGH_DENSITY_TABLET = 666;
 	private int THIS_DEVICE;
+	private Thread bgConnectionChecker = null;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -191,14 +194,23 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         rlLIParams = new RelativeLayout.LayoutParams(scrWidth / 2, 80);
         rlLIParams.topMargin = scrHeight / 2 - 80;
         rlLIContainer.addView(rlButtons, rlLIParams);
-/********** END ***********/        
+/********** END ***********/      
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("Please make sure you have an active data connection.")
 		       .setCancelable(false)
 		       .setTitle("Lode4Android: No Internet Access")
-		       .setPositiveButton("Leave", new DialogInterface.OnClickListener() {
+		       .setPositiveButton("Ignore", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
-		                LODEclActivity.this.finish();
+		        	   if(!isConnCheckerSleeping){
+		        		   bgConnectionChecker = new Thread(new BgConnectionChecker(System.currentTimeMillis()));
+		        		   bgConnectionChecker.start();
+			       			Log.e("alertNetwork", "bgConncetionChecker is sleeping");
+		        	   }
+		        	   else{
+			       			Log.e("alertNetwork", "bgConncetionChecker is not sleeping");
+		        	   }
+		        	   dialog.dismiss();
+		               pbCL.setVisibility(View.GONE);
 		           }
 		       })
 		       .setNegativeButton("Settings", new DialogInterface.OnClickListener() {
@@ -219,7 +231,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 		           }
 		       })
 		       .setNegativeButton("Stay", new DialogInterface.OnClickListener() {
-		           public void onClick(DialogInterface dialog, int id) {
+		           public void onClick(DialogInterface dialog, int id){
 		        	   dialog.dismiss();
 		           }
 		       });
@@ -228,7 +240,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 
 		builder = new AlertDialog.Builder(this);
 		builder.setMessage("The course or lecture data is incorrect.")
-		       .setCancelable(true)
+		       .setCancelable(false)
 		       .setTitle("LODE4Android: Error")
 		       .setNegativeButton("Okay", new DialogInterface.OnClickListener() {
 		           public void onClick(DialogInterface dialog, int id) {
@@ -540,6 +552,29 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			comingFromSettings = false;
 			new Thread(coursesPopulator).start();
 		}
+		if(connectedJustNow){
+			connectedJustNow = false;
+			Log.e("bgConncetionChecker", "null");
+		}
+//		if(connectedJustNow){
+//			Log.e("connectedJustNow", "true");
+//			connectedJustNow = false;
+//			if(bgConnectionChecker != null){
+//				Thread dead = bgConnectionChecker;
+//				bgConnectionChecker = null;
+//				dead.interrupt();
+//			}
+//	        courses = new ArrayList<TextView>();
+//			//new Thread(coursesPopulator).start();
+//	        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
+//				@Override
+//				public boolean isEnabled(int position) {
+//					if(position == 0)
+//						return false;
+//					return true;
+//				}
+//			});
+//		}
 	}
 	private boolean isConnected() {
 	    ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -859,5 +894,43 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
     			return HIGH_DENSITY_TABLET;
     		}
     	}
+	}
+	private class BgConnectionChecker implements Runnable{
+		long id;
+		protected BgConnectionChecker(long id){
+			this.id = id;
+		}
+		@Override
+		public void run() {
+			isConnCheckerSleeping = true;
+			while(!isConnected()){
+				try{
+					Log.e("Thread " + id, "sleeping for 5 seconds");
+					Thread.sleep(5000);
+				}catch(InterruptedException e){
+					e.printStackTrace();
+				}
+			}
+			connectedJustNow = true;
+			Log.e("bgConnectionChecker", "finishing");
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					courses.removeAll(courses);
+			        courses = new ArrayList<TextView>();
+					new Thread(coursesPopulator).start();
+			        lvCourses.setAdapter(new CoursesAdapter(CL_CONTEXT, R.layout.courses, courses, metrics){
+						@Override
+						public boolean isEnabled(int position) {
+							if(position == 0)
+								return false;
+							return true;
+						}
+					});
+			        lvCourses.invalidate();
+				}
+			});
+			isConnCheckerSleeping = false;
+		}
 	}
 }

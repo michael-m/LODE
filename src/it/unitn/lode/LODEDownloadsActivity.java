@@ -199,7 +199,6 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 						public void run() {
 							deleteDirAndContents(deleteDir);
 							handler.post(new Runnable() {
-								
 								@Override
 								public void run() {
 									new Thread(lecturesPopulator).start();
