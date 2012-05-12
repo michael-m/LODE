@@ -4,13 +4,14 @@
   	android:layout_width="wrap_content"
   	android:layout_height="wrap_content"
   	android:background="#30d3d3d3">
-	<RelativeLayout
+    	<RelativeLayout
   		android:layout_width="wrap_content"
   		android:layout_height="wrap_content">
-		<TextView
+		<CheckedTextView
 			android:id="@+id/tvCourses"
 			android:textColor="@android:color/black"
   			android:layout_width="match_parent"
-  			android:layout_height="wrap_content"/>
+  			android:layout_height="wrap_content"
+  			android:focusableInTouchMode="true"/>
   	</RelativeLayout>
 </RelativeLayout>

@@ -1,9 +1,10 @@
 package it.unitn.lode;
 
 import java.util.ArrayList;
-
+import java.util.Map;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -11,10 +12,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckedTextView;
 import android.widget.TextView;
 
-public class LecturesAdapter extends ArrayAdapter<TextView>{
-	private ArrayList<TextView> lectures;
+public class LecturesAdapter extends ArrayAdapter<CheckedTextView>{
+	private ArrayList<CheckedTextView> lectures;
+	private Map<Integer, Boolean> checkedStates = null;
 	private Typeface tfApplegaramound = null;
 	private DisplayMetrics metrics = null;
 	private int SCR_LAYOUT;
@@ -25,10 +28,12 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
 	private final int HIGH_DENSITY_PHONE = 777;
 	private final int HIGH_DENSITY_TABLET = 666;
 	private int THIS_DEVICE;
-	public LecturesAdapter(Context context, int textViewResourceId, ArrayList<TextView> lectures, DisplayMetrics metrics) {
+	public LecturesAdapter(Context context, int textViewResourceId, ArrayList<CheckedTextView> lectures, DisplayMetrics metrics
+			, Map<Integer, Boolean> checkedStates) {
         super(context, textViewResourceId, lectures);
         this.SCR_LAYOUT = context.getResources().getConfiguration().screenLayout;
         this.lectures = lectures;
+        this.checkedStates = checkedStates;
         this.tfApplegaramound = Typeface.createFromAsset(LODETabsActivity.ASSETS, "fonts/Applegaramound.ttf");
         this.metrics = metrics;
         THIS_DEVICE = getDeviceCategory();
@@ -41,16 +46,20 @@ public class LecturesAdapter extends ArrayAdapter<TextView>{
             v = vi.inflate(R.layout.courses, null);
         }
 
-        TextView tv = lectures.get(position);
+        CheckedTextView tv = lectures.get(position);
         if (tv != null) {
-            TextView textViewTwo = (TextView) v.findViewById(R.id.tvCourses);
+            CheckedTextView textViewTwo = (CheckedTextView) v.findViewById(R.id.tvCourses);
             if (textViewTwo != null) {
                 textViewTwo.setText(tv.getText());
                 // put the id to identify the item clicked
                 textViewTwo.setTag(tv.getId());
-                textViewTwo.setFocusable(false);
-                textViewTwo.setClickable(false);
-                
+                textViewTwo.setChecked(checkedStates.get(position));
+                if(textViewTwo.isChecked()){
+                	textViewTwo.setBackgroundResource(R.layout.courses_corners_clicked);
+                }
+                else{
+                	textViewTwo.setBackgroundColor(Color.TRANSPARENT);
+                }
                 if(position == 0){
                 	if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
             			textViewTwo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);

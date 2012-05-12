@@ -2,6 +2,7 @@ package it.unitn.lode;
 
 import android.app.TabActivity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
@@ -26,11 +27,21 @@ public class LODETabsActivity extends TabActivity{
 	private final int HIGH_DENSITY_PHONE = 7777;
 	private final int HIGH_DENSITY_TABLET = 6666;
 	private int THIS_DEVICE;
+	private SharedPreferences lodeDefaults = null;
+	private SharedPreferences.Editor lodeEditor = null;
+	private final String LODE_DEFAULTS = "LODE_DEFAULTS";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 		setContentView(R.layout.tabs_main);
+
+        lodeDefaults = getSharedPreferences(LODE_DEFAULTS, MODE_PRIVATE);
+        if(lodeDefaults.getString("coursesURL", null) == null){
+        	lodeEditor = lodeDefaults.edit();
+        	lodeEditor.putString("coursesURL", "http://latemar.science.unitn.it/itunes/feeds/");
+        	lodeEditor.commit();
+        }
 
         ASSETS = getAssets();
         metrics = new DisplayMetrics();
@@ -45,11 +56,13 @@ public class LODETabsActivity extends TabActivity{
         tabHost = getTabHost();
         TabHost.TabSpec spec;
         TabHost.TabSpec spec1;
-        TabHost.TabSpec spec2;
+//        TabHost.TabSpec spec2;
+        TabHost.TabSpec spec3;
 
         Intent intent = new Intent().setClass(this, LODEclActivity.class);
         Intent intent1 = new Intent().setClass(this, LODEDownloadsActivity.class);
-        Intent intent2 = new Intent().setClass(this, LODESettingsActivity.class);
+//        Intent intent2 = new Intent().setClass(this, TunesViewerActivity.class);
+        Intent intent3 = new Intent().setClass(this, LODESettingsActivity.class);
 
         TextView tv = new TextView(this);
         if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
@@ -81,36 +94,56 @@ public class LODETabsActivity extends TabActivity{
             tv1.setTypeface(tfApplegaramound, Typeface.BOLD);
         	tv1.setTextSize(17);
         }
-        tv1.setText("Settings");
+        tv1.setText("Downloads");
         tv1.setGravity(Gravity.CENTER);
         tv1.setBackgroundResource(R.drawable.tab_normal);
 
-        TextView tv2 = new TextView(this);
+//        TextView tv2 = new TextView(this);
+//        if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
+//        	tv2.setTextSize(14);
+//            tv2.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+//        }
+//        else if(THIS_DEVICE == HIGH_DENSITY_PHONE){
+//            tv2.setTypeface(tfApplegaramound, Typeface.BOLD);
+//        	tv2.setTextSize(15);
+//        }
+//        else{
+//            tv2.setTypeface(tfApplegaramound, Typeface.BOLD);
+//        	tv2.setTextSize(17);
+//        }
+//        tv2.setText("iTunes U");
+//        tv2.setGravity(Gravity.CENTER);
+//        tv2.setBackgroundResource(R.drawable.tab_normal);
+
+        TextView tv3 = new TextView(this);
         if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
-        	tv2.setTextSize(14);
-            tv2.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        	tv3.setTextSize(14);
+            tv3.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         }
         else if(THIS_DEVICE == HIGH_DENSITY_PHONE){
-            tv2.setTypeface(tfApplegaramound, Typeface.BOLD);
-        	tv2.setTextSize(15);
+            tv3.setTypeface(tfApplegaramound, Typeface.BOLD);
+        	tv3.setTextSize(15);
         }
         else{
-            tv.setTypeface(tfApplegaramound, Typeface.BOLD);
-        	tv.setTextSize(17);
+            tv3.setTypeface(tfApplegaramound, Typeface.BOLD);
+        	tv3.setTextSize(17);
         }
-        tv2.setText("Downloads");
-        tv2.setGravity(Gravity.CENTER);
-        tv2.setBackgroundResource(R.drawable.tab_normal);
-
-        spec = tabHost.newTabSpec("Lectures").setIndicator(tv).setContent(intent);
+        tv3.setText("Settings");
+        tv3.setGravity(Gravity.CENTER);
+        tv3.setBackgroundResource(R.drawable.tab_normal);
+        
+        spec = tabHost.newTabSpec("Courses").setIndicator(tv).setContent(intent);
         tabHost.addTab(spec);
 
-        spec1 = tabHost.newTabSpec("Downloads").setIndicator(tv2).setContent(intent1);
+        spec1 = tabHost.newTabSpec("Downloads").setIndicator(tv1).setContent(intent1);
         tabHost.addTab(spec1);
 
-        spec2 = tabHost.newTabSpec("Settings").setIndicator(tv1).setContent(intent2);
-        tabHost.addTab(spec2);
+//        spec2 = tabHost.newTabSpec("iTunesU").setIndicator(tv2).setContent(intent2);
+//        tabHost.addTab(spec2);
         
+        spec3 = tabHost.newTabSpec("Settings").setIndicator(tv3).setContent(intent3);
+        tabHost.addTab(spec3);
+
         LinearLayout llTabs = (LinearLayout) findViewById(R.id.llTabs);
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams((scrWidth * 3) /4, 30);
         tabParams.gravity = Gravity.CENTER;

@@ -1,21 +1,27 @@
 package it.unitn.lode;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckedTextView;
 import android.widget.TextView;
 
-public class CoursesAdapter extends ArrayAdapter<TextView>{
-	private ArrayList<TextView> courses;
+public class CoursesAdapter extends ArrayAdapter<CheckedTextView>{
+	private ArrayList<CheckedTextView> courses = null;
+	private Map<Integer, Boolean> checkedStates = null;
 	private Typeface tfApplegaramound = null;
-	public ArrayList<Integer> selectedIds = new ArrayList<Integer>();
+	private ArrayList<Integer> selectedIds = new ArrayList<Integer>();
 	private DisplayMetrics metrics = null;
 	private int SCR_LAYOUT;
 	private final int SCR_MASK = Configuration.SCREENLAYOUT_SIZE_MASK;
@@ -25,10 +31,12 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
 	private final int HIGH_DENSITY_PHONE = 777;
 	private final int HIGH_DENSITY_TABLET = 666;
 	private int THIS_DEVICE;
-	public CoursesAdapter(Context context, int textViewResourceId, ArrayList<TextView> courses, DisplayMetrics metrics){
+	public CoursesAdapter(Context context, int textViewResourceId, ArrayList<CheckedTextView> courses, DisplayMetrics metrics
+			, Map<Integer, Boolean> checkedStates){
         super(context, textViewResourceId, courses);
         this.SCR_LAYOUT = context.getResources().getConfiguration().screenLayout;
         this.courses = courses;
+        this.checkedStates = checkedStates;
         this.tfApplegaramound = Typeface.createFromAsset(LODETabsActivity.ASSETS, "fonts/Applegaramound.ttf");
         this.metrics = metrics;
         THIS_DEVICE = getDeviceCategory();
@@ -40,14 +48,19 @@ public class CoursesAdapter extends ArrayAdapter<TextView>{
             LayoutInflater vi = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             v = vi.inflate(R.layout.courses, null);
         }
-
-        TextView tv = courses.get(position);
+        CheckedTextView tv = courses.get(position);
         if (tv != null) {
-            TextView textViewTwo = (TextView) v.findViewById(R.id.tvCourses);
+            CheckedTextView textViewTwo = (CheckedTextView) v.findViewById(R.id.tvCourses);
             if (textViewTwo != null) {
                 textViewTwo.setText(tv.getText());
                 textViewTwo.setTag(tv.getId());
-                
+                textViewTwo.setChecked(checkedStates.get(position));
+                if(textViewTwo.isChecked()){
+                	textViewTwo.setBackgroundResource(R.layout.courses_corners_clicked);
+                }
+                else{
+                	textViewTwo.setBackgroundColor(Color.TRANSPARENT);
+                }
                 if(position == 0){
                 	if(THIS_DEVICE == MEDIUM_DENSITY_PHONE){
             			textViewTwo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);

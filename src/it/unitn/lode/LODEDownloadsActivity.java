@@ -3,6 +3,7 @@ package it.unitn.lode;
 import it.unitn.lode.data.Courses;
 import it.unitn.lode.data.Lectures;
 import it.unitn.lode.data.LodeSaxDataParser;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,6 +33,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
+import android.widget.CheckedTextView;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -44,8 +46,10 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 	private LodeSaxDataParser lecturesParser = null;
 	private ListView lvCourses = null;
 	private ListView lvLectures = null;
-	private ArrayList<TextView> courses = null;
-	private ArrayList<TextView> lectures = null;
+	private ArrayList<CheckedTextView> courses = null;
+	private ArrayList<CheckedTextView> lectures = null;
+	private Map<Integer, Boolean> cCheckedStates = null;
+	private Map<Integer, Boolean> lCheckedStates = null;
 	private RelativeLayout rlCL = null;
 	private RelativeLayout.LayoutParams rlCLParams = null;
 	private LodeSaxDataParser coursesParser = null;
@@ -58,9 +62,9 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 	private Iterator<Lectures> lsIterator = null;
 	private Handler handler = null;
 	private final Context coursesContext = this;
-	private TextView tvCourse = null;
+	private CheckedTextView tvCourse = null;
 	private Courses selectedCourse = null;
-	private TextView tvItem = null;
+	private CheckedTextView tvItem = null;
 	private final int LV_COURSES = 100;
 	private final int LV_LECTURES = 101;
 	private ImageButton btnWatch = null;
@@ -239,10 +243,12 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
         rlLIParams.leftMargin = scrWidth / 4 - 15;
         rlCL.addView(rlLIContainer, rlLIParams);
 /****** END ******/
-        courses = new ArrayList<TextView>();
-        lectures = new ArrayList<TextView>();
+        courses = new ArrayList<CheckedTextView>();
+        lectures = new ArrayList<CheckedTextView>();
+		cCheckedStates = new TreeMap<Integer, Boolean>();
+		lCheckedStates = new TreeMap<Integer, Boolean>();
         cl = new TreeMap<Integer, List<Lectures>>();
-        tvCourse = new TextView(this);
+        tvCourse = new CheckedTextView(this);
         
         coursesPopulator = new Runnable() {
 			@Override
@@ -267,17 +273,28 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 						public void run() {
 							pbCL.bringToFront();
 							String title;
-				            tvCourse = new TextView(coursesContext);
+				            tvCourse = new CheckedTextView(coursesContext);
 				        	tvCourse.setText("\nAvailable Courses");
 				        	courses.add(tvCourse);
 //				        	Log.e("Title: ", "Available Courses");
 					        while(csIterator.hasNext()){
 					        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
 					        	title = title.trim();
-					            tvCourse = new TextView(coursesContext);
+					            tvCourse = new CheckedTextView(coursesContext);
 					        	tvCourse.setText(title);
 					        	courses.add(tvCourse);
 					        }
+							for(int a = 0; a < courses.size(); a++){
+								cCheckedStates.put(a, new Boolean(false));
+							}
+					        lvCourses.setAdapter(new CoursesAdapter(CL_CONTEXT, R.layout.courses, courses, metrics, cCheckedStates){
+								@Override
+								public boolean isEnabled(int position) {
+									if(position == 0)
+										return false;
+									return true;
+								}
+							});
 							pbCL.setVisibility(View.GONE);
 					        lvCourses.invalidateViews();
 						}
@@ -301,22 +318,22 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 		};
 		pbCL.setVisibility(View.VISIBLE);
 		new Thread(coursesPopulator).start();
-        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
-			@Override
-			public boolean isEnabled(int position) {
-				if(position == 0)
-					return false;
-				return true;
-			}
-		});
-        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures, metrics){
-			@Override
-			public boolean isEnabled(int position) {
-				if(position == 0)
-					return false;
-				return true;
-			}
-		});
+//        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
+//			@Override
+//			public boolean isEnabled(int position) {
+//				if(position == 0)
+//					return false;
+//				return true;
+//			}
+//		});
+//        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures, metrics){
+//			@Override
+//			public boolean isEnabled(int position) {
+//				if(position == 0)
+//					return false;
+//				return true;
+//			}
+//		});
         lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
@@ -353,14 +370,26 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 	}
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+//		parent.setSelection(position);
 		final Integer POSITION = position;
 		if(parent.getId() == LV_COURSES){
-		     lvLectures.setEnabled(false);
+			for(int i = 0; i < courses.size(); i++){
+				if(i == position){
+					cCheckedStates.put(i, true);
+				}
+				else{
+					cCheckedStates.put(i, false);
+				}
+			}
+			CheckedTextView ctv = (CheckedTextView) view.findViewById(R.id.tvCourses);
+			ctv.toggle();
+
+			lvLectures.setEnabled(false);
 			if(rlLIContainer.getVisibility() == View.VISIBLE){
 				rlLIContainer.setVisibility(View.INVISIBLE);
 			}
 //			currPos = position;
-			tvItem = (TextView) parent.getItemAtPosition(position);
+			tvItem = (CheckedTextView) parent.getItemAtPosition(position);
 			
 			Iterator<Courses> selectedIterator = cs.iterator();
 			String title;
@@ -434,7 +463,7 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 											pbCL.setVisibility(View.VISIBLE);
 											pbCL.bringToFront();
 											lectures.removeAll(lectures);
-								            tvItem = new TextView(coursesContext);
+								            tvItem = new CheckedTextView(coursesContext);
 								            String courseDetails = "Professor in charge: " + selectedCourse.getDocentec() + "\n";
 								            courseDetails+= "Academic Year: " + selectedCourse.getYear();
 								        	tvItem.setText(courseDetails);
@@ -446,7 +475,7 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 									        	if(new File(fileName).exists()){
 										        	String lTitle = nextLs.getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
 										        	lTitle = lTitle.trim();
-										            tvItem = new TextView(coursesContext);
+										            tvItem = new CheckedTextView(coursesContext);
 										        	tvItem.setText(lTitle);
 										        	tvItem.setTag(R.id.tvLectureDataUrl, BASE_URL + nextLs.getFolderl());
 										        	int start = nextLs.getUrllez().lastIndexOf("/") + 1;
@@ -462,6 +491,17 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 										        	lectures.add(tvItem);
 									        	}
 									        }
+											for(int a = 0; a < lectures.size(); a++){
+												lCheckedStates.put(a, new Boolean(false));
+											}
+									        lvLectures.setAdapter(new LecturesAdapter(CL_CONTEXT, R.layout.lectures, lectures, metrics, lCheckedStates){
+												@Override
+												public boolean isEnabled(int position) {
+													if(position == 0)
+														return false;
+													return true;
+												}
+											});
 											pbCL.setVisibility(View.GONE);
 											lvLectures.setEnabled(true);
 									        lvLectures.invalidateViews();
@@ -491,6 +531,17 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 			}
 		}
 		else if(parent.getId() == LV_LECTURES){
+			for(int i = 0; i < lectures.size(); i++){
+				if(i == position){
+					lCheckedStates.put(i, true);
+				}
+				else{
+					lCheckedStates.put(i, false);
+				}
+			}
+			CheckedTextView ctv = (CheckedTextView) view.findViewById(R.id.tvCourses);
+			ctv.toggle();
+
 			TextView tvLecture = (TextView) parent.getItemAtPosition(position);
 			tvLectureInfo.setText((String) tvLecture.getTag(R.id.tvLectureInfoConcat));
 			btnWatch.setTag(R.id.videoUrl, (String) tvLecture.getTag(R.id.tvVideoUrl));
@@ -533,7 +584,7 @@ public class LODEDownloadsActivity extends Activity implements OnItemClickListen
 	protected void onResume() {
 		super.onResume();
 		if(comingFromSettings){
-	        courses = new ArrayList<TextView>();
+	        courses = new ArrayList<CheckedTextView>();
 			comingFromSettings = false;
 			new Thread(coursesPopulator).start();
 		}

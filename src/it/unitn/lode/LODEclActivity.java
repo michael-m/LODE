@@ -1,5 +1,6 @@
 package it.unitn.lode;
 
+
 import it.unitn.lode.data.Courses;
 import it.unitn.lode.data.Lectures;
 import it.unitn.lode.data.LodeSaxDataParser;
@@ -23,6 +24,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -39,7 +41,9 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.CheckedTextView;
 import android.widget.ImageButton;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -50,8 +54,10 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private LodeSaxDataParser lecturesParser = null;
 	private static ListView lvCourses = null;
 	private ListView lvLectures = null;
-	private static ArrayList<TextView> courses = null;
-	private ArrayList<TextView> lectures = null;
+	private ArrayList<CheckedTextView> courses = null;
+	private ArrayList<CheckedTextView> lectures = null;
+	private Map<Integer, Boolean> cCheckedStates = null;
+	private Map<Integer, Boolean> lCheckedStates = null;
 	private RelativeLayout rlCL = null;
 	private RelativeLayout.LayoutParams rlCLParams = null;
 	private LodeSaxDataParser coursesParser = null;
@@ -64,14 +70,14 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private Iterator<Lectures> lsIterator = null;
 	private static Handler handler = null;
 	private final Context coursesContext = this;
-	private TextView tvCourse = null;
+	private CheckedTextView tvCourse = null;
 	private Courses selectedCourse = null;
-	private TextView tvItem = null;
+	private CheckedTextView tvItem = null;
 	private final int LV_COURSES = 100;
 	private final int LV_LECTURES = 101;
 	private ImageButton btnWatch = null;
 	private ImageButton btnDownload = null;
-	private final String BASE_URL = "http://latemar.science.unitn.it/itunes/feeds/";
+	private static String BASE_URL;
 	public static Context CL_CONTEXT;
 	private AlertDialog alertNetwork = null, alertExit = null, alertWrongData = null;
 	private boolean comingFromSettings = false;
@@ -104,6 +110,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	private final int HIGH_DENSITY_TABLET = 666;
 	private int THIS_DEVICE;
 	private Thread bgConnectionChecker = null;
+	private SharedPreferences lodeSettings = null;
+	private final String LODE_PREFS = "LODE_PREFS";
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -268,11 +276,14 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
         rlLIParams.leftMargin = scrWidth / 4 - 15;
         rlCL.addView(rlLIContainer, rlLIParams);
 /****** END ******/
-        courses = new ArrayList<TextView>();
-        lectures = new ArrayList<TextView>();
+        courses = new ArrayList<CheckedTextView>();
+        lectures = new ArrayList<CheckedTextView>();
+		cCheckedStates = new TreeMap<Integer, Boolean>();
+		lCheckedStates = new TreeMap<Integer, Boolean>();
         cl = new TreeMap<Integer, List<Lectures>>();
-        tvCourse = new TextView(this);
+        tvCourse = new CheckedTextView(this);
         
+        getPrefs();
         coursesPopulator = new Runnable() {
 			@Override
 			public void run() {
@@ -327,16 +338,32 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 						public void run() {
 							pbCL.bringToFront();
 							String title;
-				            tvCourse = new TextView(coursesContext);
+				            tvCourse = new CheckedTextView(coursesContext);
 				        	tvCourse.setText("\nAvailable Courses");
 				        	courses.add(tvCourse);
 					        while(csIterator.hasNext()){
 					        	title = csIterator.next().getTitoloc().trim().replaceAll(" +", " ").replace("\n", "");
 					        	title = title.trim();
-					            tvCourse = new TextView(coursesContext);
+					            tvCourse = new CheckedTextView(coursesContext);
 					        	tvCourse.setText(title);
 					        	courses.add(tvCourse);
 					        }
+					        for(int a = 0; a < 41; a ++){
+					        	CheckedTextView ctv = new CheckedTextView(CL_CONTEXT);
+					        	ctv.setText("ctv " + a);
+					        	courses.add(ctv);
+					        }
+							for(int a = 0; a < courses.size(); a++){
+								cCheckedStates.put(a, new Boolean(false));
+							}
+					        lvCourses.setAdapter(new CoursesAdapter(CL_CONTEXT, R.layout.courses, courses, metrics, cCheckedStates){
+								@Override
+								public boolean isEnabled(int position) {
+									if(position == 0)
+										return false;
+									return true;
+								}
+							});
 							pbCL.setVisibility(View.GONE);
 					        lvCourses.invalidateViews();
 						}
@@ -359,29 +386,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 		};
 		pbCL.setVisibility(View.VISIBLE);
 		new Thread(coursesPopulator).start();
-        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
-			@Override
-			public boolean isEnabled(int position) {
-				if(position == 0)
-					return false;
-				return true;
-			}
-		});
-        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures, metrics){
-			@Override
-			public boolean isEnabled(int position) {
-				if(position == 0)
-					return false;
-				return true;
-			}
-		});
         lvCourses.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvCourses.setCacheColorHint(Color.parseColor("#00000000"));
         lvCourses.setBackgroundResource(R.layout.courses_corners);
-        lvCourses.setSelector(R.drawable.list_item);
+        lvCourses.setSelector(R.layout.courses_corners_clicked);
         lvCourses.setDividerHeight(2);
         lvCourses.setOnItemClickListener(this);
-
         
         lvLectures.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         lvLectures.setCacheColorHint(Color.parseColor("#00000000"));
@@ -407,17 +417,29 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
             rlCLParams.leftMargin = scrWidth / 3 + 5;
             rlCL.addView(lvLectures, rlCLParams);
         }
-/************* END ******************/        
+/************* END ******************/
 	}
 	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id){
+//		parent.setSelection(position);
 		final Integer POSITION = position;
 		if(parent.getId() == LV_COURSES){
-		     lvLectures.setEnabled(false);
+			for(int i = 0; i < courses.size(); i++){
+				if(i == position){
+					cCheckedStates.put(i, true);
+				}
+				else{
+					cCheckedStates.put(i, false);
+				}
+			}
+			CheckedTextView ctv = (CheckedTextView) view.findViewById(R.id.tvCourses);
+			ctv.toggle();
+
+			lvLectures.setEnabled(false);
 			if(rlLIContainer.getVisibility() == View.VISIBLE){
 				rlLIContainer.setVisibility(View.INVISIBLE);
 			}
-			tvItem = (TextView) parent.getItemAtPosition(position);
+			tvItem = (CheckedTextView) parent.getItemAtPosition(position);
 			
 			Iterator<Courses> selectedIterator = cs.iterator();
 			String title;
@@ -455,7 +477,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 										pbCL.setVisibility(View.VISIBLE);
 										pbCL.bringToFront();
 										lectures.removeAll(lectures);
-							            tvItem = new TextView(coursesContext);
+							            tvItem = new CheckedTextView(coursesContext);
 							            String courseDetails = "Professor in charge: " + selectedCourse.getDocentec() + "\n";
 							            courseDetails+= "Academic Year: " + selectedCourse.getYear();
 							        	tvItem.setText(courseDetails);
@@ -465,7 +487,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 								        	Lectures nextLs = lsIterator.next();
 								        	String lTitle = nextLs.getTitolol().trim().replaceAll(" +", " ").replace("\n", "");
 								        	lTitle = lTitle.trim();
-								            tvItem = new TextView(coursesContext);
+								            tvItem = new CheckedTextView(coursesContext);
 								        	tvItem.setText(lTitle);
 								        	tvItem.setTag(R.id.tvLectureDataUrl, BASE_URL + nextLs.getFolderl());
 								        	tvItem.setTag(R.id.tvVideoUrl, nextLs.getUrllez());
@@ -477,6 +499,22 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 								        	tvItem.setTag(R.id.tvIdForBookmark, nextLs.getFolderl());
 								        	lectures.add(tvItem);
 								        }
+								        for(int a = 0; a < 41; a ++){
+								        	CheckedTextView ctv = new CheckedTextView(CL_CONTEXT);
+								        	ctv.setText("ltv " + a);
+								        	courses.add(ctv);
+								        }
+										for(int a = 0; a < lectures.size(); a++){
+											lCheckedStates.put(a, new Boolean(false));
+										}
+								        lvLectures.setAdapter(new LecturesAdapter(CL_CONTEXT, R.layout.lectures, lectures, metrics, lCheckedStates){
+											@Override
+											public boolean isEnabled(int position) {
+												if(position == 0)
+													return false;
+												return true;
+											}
+										});
 										pbCL.setVisibility(View.GONE);
 										lvLectures.setEnabled(true);
 								        lvLectures.invalidateViews();
@@ -505,6 +543,17 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			}
 		}
 		else if(parent.getId() == LV_LECTURES){
+			for(int i = 0; i < lectures.size(); i++){
+				if(i == position){
+					lCheckedStates.put(i, true);
+				}
+				else{
+					lCheckedStates.put(i, false);
+				}
+			}
+			CheckedTextView ctv = (CheckedTextView) view.findViewById(R.id.tvCourses);
+			ctv.toggle();
+
 			TextView tvLecture = (TextView) parent.getItemAtPosition(position);
 			tvLectureInfo.setText((String) tvLecture.getTag(R.id.tvLectureInfoConcat));
 			btnWatch.setTag(R.id.videoUrl, (String) tvLecture.getTag(R.id.tvVideoUrl));
@@ -547,33 +596,44 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if(comingFromSettings){
-	        courses = new ArrayList<TextView>();
-			comingFromSettings = false;
-			new Thread(coursesPopulator).start();
-		}
-		if(connectedJustNow){
-			connectedJustNow = false;
-			Log.e("bgConncetionChecker", "null");
-		}
-//		if(connectedJustNow){
-//			Log.e("connectedJustNow", "true");
-//			connectedJustNow = false;
-//			if(bgConnectionChecker != null){
-//				Thread dead = bgConnectionChecker;
-//				bgConnectionChecker = null;
-//				dead.interrupt();
+		getPrefs();
+		
+//		checkedStates = new ArrayList<Boolean>();
+//		Iterator<CheckedTextView> iter = courses.iterator();
+//		Log.w("size", String.valueOf(courses.size()));
+//		while(iter.hasNext()){
+//			checkedStates.add(new Boolean(iter.next().isChecked()));
+//		}
+//        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics, checkedStates){
+//			@Override
+//			public boolean isEnabled(int position) {
+//				if(position == 0)
+//					return false;
+//				return true;
 //			}
+//		});
+//        lvLectures.setAdapter(new LecturesAdapter(this, R.layout.lectures, lectures, metrics){
+//			@Override
+//			public boolean isEnabled(int position) {
+//				if(position == 0)
+//					return false;
+//				return true;
+//			}
+//		});
+
+//        CheckedTextView tv = new CheckedTextView(this);
+//        tv.setText("test");
+//        for(int i = 0; i < 40; i++){
+//        	courses.add(tv);
+//        }
+//		if(comingFromSettings){
 //	        courses = new ArrayList<TextView>();
-//			//new Thread(coursesPopulator).start();
-//	        lvCourses.setAdapter(new CoursesAdapter(this, R.layout.courses, courses, metrics){
-//				@Override
-//				public boolean isEnabled(int position) {
-//					if(position == 0)
-//						return false;
-//					return true;
-//				}
-//			});
+//			comingFromSettings = false;
+//			new Thread(coursesPopulator).start();
+//		}
+//		if(connectedJustNow){
+//			connectedJustNow = false;
+//			Log.e("bgConncetionChecker", "null");
 //		}
 	}
 	private boolean isConnected() {
@@ -612,6 +672,12 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			lvLectures.setEnabled(true);
 		}
 	}
+	@Override
+	protected void onRestoreInstanceState(Bundle savedInstanceState) {
+		courses.removeAll(courses);
+		courses = new ArrayList<CheckedTextView>();
+		super.onRestoreInstanceState(savedInstanceState);
+	}
 	private class LectureDownloader extends AsyncTask<String, Integer, String>{
 		String status = "Determining download size ...";
 	    @Override
@@ -630,7 +696,8 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 	    @Override
 	    protected String doInBackground(String... sUrl){
 	    	if(urlGoAhead){
-		    	List<URL> urls = new ArrayList<URL>();
+	    		File lectureDirectory = null;
+	    		List<URL> urls = new ArrayList<URL>();
 		    	File downloadCheck = new File(SD_CARD + "/lode/"  + lectureDir + "/lecture.downloaded");
 		    	if(downloadCheck.exists()){
 		    		handler.post(new Runnable() {
@@ -643,7 +710,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 		    	else{
 			        try {
 			            // create a File object for the parent directory
-			            File lectureDirectory = new File(SD_CARD + "/lode/"  + lectureDir + "/");
+			            lectureDirectory = new File(SD_CARD + "/lode/"  + lectureDir + "/");
 			            File slidesDirectory = new File(SD_CARD	+ "/lode/"  + lectureDir + "/img");
 		            	urls.add(new URL(sUrl[0] + "/LECTURE.XML"));
 		            	urls.add(new URL(sUrl[0] + "/TIMED_SLIDES.XML"));
@@ -798,11 +865,17 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 				            outputFile = new File(lectureDirectory, "lecture.downloaded");
 				            output = new FileOutputStream(outputFile);
 				            OutputStreamWriter downloadCheckWriter = new OutputStreamWriter(output);
-				            downloadCheckWriter.write("Lecture has been successfully downloaded.");
+				            downloadCheckWriter.write("Lecture has been downloaded successfully.");
 				            downloadCheckWriter.flush();
 				            downloadCheckWriter.close();
 				            output.flush();
 				            output.close();
+				            handler.post(new Runnable() {
+								@Override
+								public void run() {
+		            				makeToast("Lecture has been downloaded successfully.");
+								}
+							});
 			            }
 			            else{
 			            	final File deleteDir = lectureDirectory;
@@ -817,9 +890,21 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 			            	}
 			            }
 			        } catch (Exception e) {
+			        	e.printStackTrace();
+		            	final File deleteDir = lectureDirectory;
 				    	handler.post(new Runnable() {
 							@Override
 							public void run() {
+				            	if(downloadCancelled){
+				            		Thread deleterThread = new Thread(){
+				            			@Override
+				            			public void run() {
+						            		deleteDirAndContents(deleteDir);
+				            			}
+				            		};
+				            		deleterThread.start();
+				            	}
+								dProgressDialog.getButton(ProgressDialog.BUTTON_POSITIVE).setEnabled(true);
 					        	makeToast("Error downloading lecture.");
 							}
 						});
@@ -843,6 +928,7 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 				@Override
 				public void run() {
 					dProgressDialog.dismiss();
+					dProgressDialog.getButton(ProgressDialog.BUTTON_POSITIVE).setEnabled(true);
 					status = "Downloading lecture";
 					dProgressDialog.setMessage(status);
 				}
@@ -917,20 +1003,28 @@ public class LODEclActivity extends Activity implements OnItemClickListener, OnC
 				@Override
 				public void run() {
 					courses.removeAll(courses);
-			        courses = new ArrayList<TextView>();
+			        courses = new ArrayList<CheckedTextView>();
 					new Thread(coursesPopulator).start();
-			        lvCourses.setAdapter(new CoursesAdapter(CL_CONTEXT, R.layout.courses, courses, metrics){
+					ListAdapter lvCoursesAdapter = lvCourses.getAdapter();
+					lvCoursesAdapter = null;
+					lvCoursesAdapter = new CoursesAdapter(CL_CONTEXT, R.layout.courses, courses, metrics, cCheckedStates){
 						@Override
 						public boolean isEnabled(int position) {
 							if(position == 0)
 								return false;
 							return true;
 						}
-					});
+					};
+			        lvCourses.setAdapter(lvCoursesAdapter);
 			        lvCourses.invalidate();
 				}
 			});
 			isConnCheckerSleeping = false;
 		}
+	}
+	private void getPrefs(){
+        lodeSettings = getSharedPreferences(LODE_PREFS, MODE_PRIVATE);
+        BASE_URL = lodeSettings.getString("coursesURL", "http://latemar.science.unitn.it/itunes/feeds/");
+        makeToast(BASE_URL);
 	}
 }
